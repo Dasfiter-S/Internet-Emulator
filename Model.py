@@ -67,11 +67,10 @@ class IOitems(object):
     def startServer(self, controller):
         #Port will be set at launch on terminal
         servers = [SocketServer.ThreadingUDPServer(('', 53), controller.UDPRequestHandler),
-                   #SocketServer.ThreadingTCPServer(('', 53), controller.TCPRequestHandler),
+                   SocketServer.ThreadingTCPServer(('', 53), controller.TCPRequestHandler),
         ]
-        #for s in servers:
-        if 1:
-            thread = threading.Thread(target=servers[0].serve_forever)
+        for s in servers:
+            thread = threading.Thread(target=s.serve_forever)
             thread.daemon = True
             thread.start()
             print '%s server loop running in thread: %s' % (s.RequestHandlerClass.__name__[:3], thread.name)
