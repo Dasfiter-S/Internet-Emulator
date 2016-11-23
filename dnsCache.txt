@@ -1,0 +1,8 @@
+nbc.com., 127.0.0.1
+cnn.com., 127.0.0.1
+whathappened.org., 101.6.6.6
+theotherguy.html., 64.56.78.90
+www.nbc.com., 127.0.0.1
+www.cnn.com., 127.0.0.1
+www.whathappened.org., 101.6.6.6
+www.theotherguy.html., 64.56.78.90
