@@ -1,9 +1,11 @@
 import SocketServer
 import threading
+import Queue
 import sys
-from Controller import *
+import Controller
+import os
 from dnslib import *
-
+from multiprocessing.dummy import Pool as ThreadPool
 
 class DomainItem():
 
@@ -30,14 +32,21 @@ class DomainItem():
         self.records = {self.name:[A(self.IP)] + self.ns_records,
         self.mname: [A(self.IP)], self.mail: [A(self.IP)], self.rname: [CNAME(self.name)],}
 
+class Http_start(threading.Thread):
+    def __init__(self, port='80'):
+        threading.Thread.__init__(self)
+        self.port = port
+        
+    def run(self):
+        os.system('sudo python -m SimpleHTTPServer ' + self.port)
 
 class IOitems(object):
-    def loadFile(currentFile = 'dnsCache.txt'):
+    def loadFile(self, currentFile = 'dnsCache.txt'):
         with open(currentFile) as domains:
             domainList = [tuple(map(str.strip, line.split(','))) for line in domains]
         return domainList
 
-    def addToCache(DomainItem, currentFile = 'dnsCache.txt'):
+    def addToCache(self, DomainItem, currentFile = 'dnsCache.txt'):
         with open(currentFile, 'r+') as domains:
             domainList = [tuple(map(str.strip, line.split(','))) for line in domains]
             dictList = dict(domainList)
@@ -48,7 +57,7 @@ class IOitems(object):
                 fileData.write(str(DomainItem.name) + ', ' + str(DomainItem.IP) + '\n')
                 print DomainItem.name + ' with IP ' + DomainItem.IP + ' has been added to the database'
 
-    def addToBlacklist(siteName, IP='255.255.255.255',  currentFile = 'blackList.txt'):
+    def addToBlacklist(self, siteName, IP='255.255.255.255',  currentFile = 'blackList.txt'):
         with open(currentFile, 'r+') as domains:
             domainList = [tuple(map(str.strip, line.split(','))) for line in domains]
             dictList = dict(domainList)
@@ -64,16 +73,19 @@ class IOitems(object):
     def getPort():
         return self.port
 
-    def startServer(self, controller):
-        #Port will be set at launch on terminal
-        servers = [SocketServer.ThreadingUDPServer(('', 53), controller.UDPRequestHandler),
-                   SocketServer.ThreadingTCPServer(('', 53), controller.TCPRequestHandler),
-        ]
-        for s in servers:
-            thread = threading.Thread(target=s.serve_forever)
-            thread.daemon = True
-            thread.start()
-            print '%s server loop running in thread: %s' % (s.RequestHandlerClass.__name__[:3], thread.name)
+    def startServers(self):
+        #Port for either services will be set at launch on terminal or config file
+        #Initialize and run the DNS services
+        myController = Controller.Controller()
+        server = [SocketServer.ThreadingUDPServer(('', 53), myController.UDPRequestHandler),]
+        thread = threading.Thread(target=server[0].serve_forever)
+        thread.daemon = True
+        thread.start()
+        print 'UDP server loop running' #in thread: %s % (thread.name)
+
+        #Initialize and run HTTP services
+        http_server = Http_start()
+        http_server.start()
         try:
             while 1:
                 time.sleep(1)
@@ -83,6 +95,5 @@ class IOitems(object):
         except KeyboardInterrupt:
             pass
         finally:
-            for s in servers:
-                s.shutdown()
+               server[0].shutdown()
 

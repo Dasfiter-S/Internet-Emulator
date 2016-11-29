@@ -6,15 +6,12 @@ import datetime
 import time
 import argparse
 import threading
-from Model import *
+import Model
+from dnslib import *
 
+class Controller(object):
 
-class Controller(threading.Thread):
-    def __init__(self):
-       threading.Thread.__init__(self)
-       self.queue = ''
-
-    def dns_response(data):
+    def dns_response(self, data):
         request = DNSRecord.parse(data)
         print 'Searching: '
         print request
@@ -24,11 +21,12 @@ class Controller(threading.Thread):
         strQuery = strQuery[12:-2]                     #DNSLabel type, strip class and take out string 
 
     #Will be able to specify files via terminal launch 
-        domainList = loadFile('dnsCache.txt')
+        temp = Model.IOitems()
+        domainList = temp.loadFile('dnsCache.txt')
         domainDict = dict(domainList)
-        blackList = loadFile('blackList.txt')
+        blackList = temp.loadFile('blackList.txt')
         blackDictionary = dict(blackList)
-
+        #self.printTest(threading.currentThread(), threading.enumerate())
         if blackDictionary.get(strQuery):              #have to implement view update
             reply.add_answer(RR(rname=qn, rtype=1, rclass=1, ttl=300, rdata=A(blackDictionary[strQuery])))
         else:
@@ -36,9 +34,16 @@ class Controller(threading.Thread):
                 reply.add_answer(RR(rname=qn, rtype=1, rclass=1, ttl=300, rdata=A(domainDict[strQuery])))
             else:
                 try:
-                    if socket.inet_aton(socket.gethostbyname(strQuery)):
-                        responseIP = socket.gethostbyname(strQuery)             #only supports IPV4 can easily upgrade to IPV6
-                        reply.add_answer(RR(rname=qn, rtype=1, rclass=1, ttl=300, rdata=A(responseIP)))
+                    if 1:#socket.inet_aton(socket.gethostbyname(strQuery)):
+                        #responseIP = socket.gethostbyname(strQuery)             #only supports IPV4 can easily upgrade to IPV6
+                        realDNS = socket.socket( socket.AF_INET, socket.SOCK_DGRAM)
+                        realDNS.sendto(data,('8.8.8.8', 53))
+                        exData, fromaddr = realDNS.recvfrom(1024)
+                        realDNS.close()
+                        exreq = DNSRecord.parse(exData) 
+                        print '--------- Reply:\n', exreq
+                        return exData 
+                        #reply.add_answer(RR(rname=qn, rtype=1, rclass=1, ttl=300, rdata=A(responseIP)))
                 except socket.gaierror: 
                     print 'Not a valid address'
  
@@ -46,6 +51,9 @@ class Controller(threading.Thread):
         return reply.pack()   # replies with an empty pack if address is blocked or not found
 
 
+    def printTest(self, currentThread, tnum):
+        print 'Current thread: ' + str(currentThread)
+        print 'Current threads alive: ' + str(tnum)
 
 
     class BaseRequestHandler(SocketServer.BaseRequestHandler):
@@ -63,7 +71,7 @@ class Controller(threading.Thread):
             try:
                 data = self.get_data()
                 print len(data), data.encode('hex')
-                self.send_data(dns_response(data))
+                self.send_data(Controller().dns_response(data))
             except Exception:
                 traceback.print_exc(file=sys.stderr)
 
@@ -97,5 +105,7 @@ class Controller(threading.Thread):
         parser.add_argument('-p', '--port', help='select the port the DNS server runs on. Default port 53', type=int)
 
         arg = parser.parse_args()
-        #setPort(arg.port)
-
+        #set_DNSport(arg.dport)
+        #set_wFile(arg.wfile)
+        #set_bFile(arg.bfile)
+        #set_HTTPport(arg.hport)
