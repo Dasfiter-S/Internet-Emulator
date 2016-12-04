@@ -4,13 +4,15 @@ import traceback
 import SocketServer
 import datetime
 import time
-import argparse
+#import argparse
 import threading
 import Model
 from dnslib import *
 
-class Controller(object):
-
+class Controller(Model.IOitems):
+    #Receives the raw DNS query data and extracts the name of the address. Checks the address agaisnt specified
+    #lists. If the address is not found then it is forwarded to an external DNS to resolve. Forwarded
+    #requests send the raw query data and receive raw data.
     def dns_response(self, data):
         request = DNSRecord.parse(data)
         print 'Searching: '
@@ -20,38 +22,51 @@ class Controller(object):
         strQuery = repr(qn)                            #remove class formatting
         strQuery = strQuery[12:-2]                     #DNSLabel type, strip class and take out string 
 
-    #Will be able to specify files via terminal launch 
-        temp = Model.IOitems()
-        domainList = temp.loadFile('dnsCache.txt')
+        #Will be able to specify files via terminal launch 
+        temp = Model.RunTimeItems()
+        temp.setLists()
+        domainList = self.loadFile(temp.whitelist)
         domainDict = dict(domainList)
-        blackList = temp.loadFile('blackList.txt')
+        blackList = self.loadFile(temp.blacklist)
         blackDictionary = dict(blackList)
-        #self.printTest(threading.currentThread(), threading.enumerate())
-        if blackDictionary.get(strQuery):              #have to implement view update
-            reply.add_answer(RR(rname=qn, rtype=1, rclass=1, ttl=300, rdata=A(blackDictionary[strQuery])))
+        print 'WL: ' + temp.whitelist
+        print 'BL: ' + temp.blacklist
+        #self.printThreads(threading.currentThread(), threading.enumerate())
+        if blackDictionary.get(strQuery):              
+            reply.add_answer(RR(rname=qn, rtype=1, rclass=1, ttl=300, rdata=A('`127.0.0.1')))
         else:
             if domainDict.get(strQuery):
                 reply.add_answer(RR(rname=qn, rtype=1, rclass=1, ttl=300, rdata=A(domainDict[strQuery])))
             else:
                 try:
-                    if 1:#socket.inet_aton(socket.gethostbyname(strQuery)):
-                        #responseIP = socket.gethostbyname(strQuery)             #only supports IPV4 can easily upgrade to IPV6
-                        realDNS = socket.socket( socket.AF_INET, socket.SOCK_DGRAM)
-                        realDNS.sendto(data,('8.8.8.8', 53))
-                        exData, fromaddr = realDNS.recvfrom(1024)
-                        realDNS.close()
-                        exreq = DNSRecord.parse(exData) 
-                        print '--------- Reply:\n', exreq
-                        return exData 
-                        #reply.add_answer(RR(rname=qn, rtype=1, rclass=1, ttl=300, rdata=A(responseIP)))
+                    realDNS = socket.socket( socket.AF_INET, socket.SOCK_DGRAM)
+                    realDNS.sendto(data,('8.8.8.8', 53))
+                    answerData, fromaddr = realDNS.recvfrom(1024)
+                    realDNS.close()
+                    readableAnswer = DNSRecord.parse(answerData) 
+                    print '--------- Reply:\n', readableAnswer
+                    return answerData 
                 except socket.gaierror: 
-                    print 'Not a valid address'
+                    print '-------------NOT A VALID ADDRESS--------------'
  
         print '--------- Reply:\n', reply
-        return reply.pack()   # replies with an empty pack if address is blocked or not found
+        return reply.pack()   # replies with an empty pack if address is not found
 
+    def set_wFile(self, infile=None):
+        if infile is not None:
+            self.whitelist = infile
 
-    def printTest(self, currentThread, tnum):
+    def get_wFile(self):
+        return self.whitelist
+
+    def set_bFile(self, infile=None):
+        if infile is not None:
+            self.blacklist = infile
+    
+    def get_bFile(self):
+        return self.blacklist
+
+    def printThreads(self, currentThread, tnum):
         print 'Current thread: ' + str(currentThread)
         print 'Current threads alive: ' + str(tnum)
 
@@ -99,13 +114,3 @@ class Controller(object):
         def send_data(self, data):
             return self.request[1].sendto(data, self.client_address)
 
-
-    def launchOptions(self):
-        parser = argparse.ArgumentParser(description='This program forwards DNS requests not found in the whitelist or blacklist')
-        parser.add_argument('-p', '--port', help='select the port the DNS server runs on. Default port 53', type=int)
-
-        arg = parser.parse_args()
-        #set_DNSport(arg.dport)
-        #set_wFile(arg.wfile)
-        #set_bFile(arg.bfile)
-        #set_HTTPport(arg.hport)

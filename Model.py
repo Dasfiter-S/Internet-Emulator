@@ -4,6 +4,8 @@ import Queue
 import sys
 import Controller
 import os
+import argparse
+import ConfigParser
 from dnslib import *
 from multiprocessing.dummy import Pool as ThreadPool
 
@@ -32,59 +34,208 @@ class DomainItem():
         self.records = {self.name:[A(self.IP)] + self.ns_records,
         self.mname: [A(self.IP)], self.mail: [A(self.IP)], self.rname: [CNAME(self.name)],}
 
+        #item = IOitems()
+        #item.addToCache(self, controller.get_blacklist)
+
 class Http_start(threading.Thread):
-    def __init__(self, port='80'):
+    def __init__(self, port=None):
         threading.Thread.__init__(self)
         self.port = port
-        
+
     def run(self):
-        os.system('sudo python -m SimpleHTTPServer ' + self.port)
+        os.system('sudo python -m SimpleHTTPServer ' + str(self.port))
+
+class RunTimeItems(object):
+    def __init__(self, whiteList=None, blackList=None):
+        self.whitelist = whiteList
+        self.blacklist = blackList
+
+    def setLists(self):
+        if self.save == True and Val is None:
+             return
+        temp = IOitems()
+        items = temp.loadConfig()
+        self.whitelist = items['Whitelist']
+        self.blacklist = items['Blacklist']
 
 class IOitems(object):
-    def loadFile(self, currentFile = 'dnsCache.txt'):
-        with open(currentFile) as domains:
-            domainList = [tuple(map(str.strip, line.split(','))) for line in domains]
-        return domainList
+    def __init__(self, port=53, hport=None, saveOption=None):
+        self.port = port
+        self.http_port = hport
+        self.save = saveOption
+    
+    def setLists(self):
+        print 'Reading'
+        temp = IOitems()
+        items = temp.loadConfig()
+        self.http_port = items['HTTPport']
 
-    def addToCache(self, DomainItem, currentFile = 'dnsCache.txt'):
-        with open(currentFile, 'r+') as domains:
-            domainList = [tuple(map(str.strip, line.split(','))) for line in domains]
-            dictList = dict(domainList)
-        with open(currentFile, 'a+') as fileData:
-            if DomainItem.name in dictList:
-                print DomainItem.name + ' already exists in database'
-            elif DomainItem.name not in dictList:
-                fileData.write(str(DomainItem.name) + ', ' + str(DomainItem.IP) + '\n')
-                print DomainItem.name + ' with IP ' + DomainItem.IP + ' has been added to the database'
+    def loadFile(self, currentFile):
+        try:
+            with open(currentFile) as domains:
+                domainList = [tuple(map(str.strip, line.split(','))) for line in domains]
+            return domainList
+        except IOError:
+            print 'File not found, specify a valid file'
+            sys.exit(1)
 
-    def addToBlacklist(self, siteName, IP='255.255.255.255',  currentFile = 'blackList.txt'):
-        with open(currentFile, 'r+') as domains:
-            domainList = [tuple(map(str.strip, line.split(','))) for line in domains]
-            dictList = dict(domainList)
-        with open(currentFile, 'a+') as fileData:
-            if siteName in dictList:
-                print siteName + ' already exists in database'
-            elif sitename not in dictList:
-                fileData.write(str(siteName) + ', ' + str(IP) + '\n')
+    def addToCache(self, DomainItem, currentFile):
+        try:
+            if DomainItem is not None:
+                with open(currentFile, 'r+') as domains:
+                    domainList = [tuple(map(str.strip, line.split(','))) for line in domains]
+                    dictList = dict(domainList)
+                with open(currentFile, 'a+') as fileData:
+                    if DomainItem.name in dictList:
+                        print DomainItem.name + ' already exists in database'
+                    elif DomainItem.name not in dictList:
+                        fileData.write(str(DomainItem.name) + ', ' + str(DomainItem.IP) + '\n')
+                        print DomainItem.name + ' with IP ' + DomainItem.IP + ' has been added to the database'
+        except IOError:
+            print 'File not found, specify a valid file'
+            sys.exit(1)
 
-    def setPort(portIn):
-        self.port = portIn
-   
-    def getPort():
+    def addToBlacklist(self, siteName, IP,  currentFile):
+        try:
+            if IP is not None and siteName is not None:
+                with open(currentFile, 'r+') as domains:
+                    domainList = [tuple(map(str.strip, line.split(','))) for line in domains]
+                    dictList = dict(domainList)
+                with open(currentFile, 'a+') as fileData:
+                    if siteName in dictList:
+                        print siteName + ' already exists in database'
+                    elif sitename not in dictList:
+                        fileData.write(str(siteName) + ', ' + str(IP) + '\n')
+        except IOError:
+            print 'File not found, specify a valid file'
+            sys.exit(1)
+    
+    def loadConfig(self, currentFile='config.ini'):
+        try:
+            readfile = ConfigParser.ConfigParser()
+            readfile.read(currentFile)
+            serverConfig = {}
+            if not readfile.has_section('Run_Time'):
+                print 'File missing Run_Time section'
+            elif readfile.has_section('Run_Time'):
+                if readfile.has_option('Run_Time', 'DNSport'):
+                    serverConfig['DNSport'] = readfile.get('Run_Time', 'DNSport')
+                if readfile.has_option('Run_Time', 'Whitelist'):
+                    serverConfig['Whitelist'] = readfile.get('Run_Time', 'Whitelist')
+                if readfile.has_option('Run_Time', 'Blacklist'):
+                    serverConfig['Blacklist'] = readfile.get('Run_Time', 'Blacklist')
+                if readfile.has_option('Run_Time', 'HTTPport'):
+                    serverConfig['HTTPport'] = readfile.get('Run_Time', 'HTTPport') 
+            if not readfile.has_section('Domain'):
+                print 'File missing Domain section'
+            elif readfile.has_section('Domain'):
+                #load the params
+                if readfile.has_option('Run_Time', 'SiteName'):
+                    serverConfig['SiteName'] = readfile.get('Domain', 'SiteName')
+                if readfile.has_option('Run_Time', 'IP'):
+                    serverConfig['IP'] = readfile.get('Domain', 'IP')
+                if readfile.has_option('Run_Time', 'TTL'):    
+                    serverConfig['TTL'] = readfile.get('Domain', 'TTL')
+                if readfile.has_option('Run_Time', 'Port'):    
+                    serverConfig['Port'] = readfile.get('Domain', 'Port')
+                if readfile.has_option('Run_Time', 'Admin'):
+                    serverConfig['Admin'] = readfile.get('Domain', 'Admin')
+            return serverConfig
+        except IOError:
+            print 'File not found, specify a valid file'
+            sys.exit(1)
+
+    def writeToConfig(self, currentFile=None, DNSport=None, whiteFile=None, blackFile=None, http_port=None, domain=None):
+        try:
+           config_file = ConfigParser.ConfigParser()
+           config_file.read(currentFile)
+           #print 'Currentfile: ' + currentFile + '  Port: ' + str(DNSport) + '  Whitelist: '+ str(whiteFile) + '  Blacklist: ' + str(blackFile)
+           if config_file.has_section('Run_Time'):
+               print 'Adding items'
+               if DNSport is not None:
+                   config_file.set('Run_Time', 'DNSport', DNSport)
+               if whiteFile is not None:
+                   config_file.set('Run_Time', 'Whitelist', whiteFile)
+               if blackFile is not None:
+                   config_file.set('Run_Time', 'Blacklist', blackFile)
+               if http_port is not None:
+                   config_file.set('Run_Time', 'HTTPport', http_port)
+           elif not config_file.has_section('Run_Time'):
+               #create config section
+               print 'Adding section and items'
+               config_file.add_section('Run_Time')
+               if DNSport is not None:
+                   config_file.set('Run_Time', 'DNSport', DNSport)
+               else:
+                   config_file.set('Run_Time', 'DNSport', '8000')
+               #migrate white and black list to config file?
+               if whiteFile is not None:
+                   config_file.set('Run_Time', 'Whitelist', whiteFile)
+               else:
+                   config_file.set('Run_Time', 'Whitelist', 'DNSCache.txt')
+               if blackFile is not None:
+                   config_file.set('Run_Time', 'Blacklist', blackFile)
+               else:
+                   config_file.set('Run_Time', 'Blacklist', 'blackList.txt')
+               if http_port is not None:
+                   config_file.set('Run_Time', 'HTTPport', http_port)
+               else:
+                   config_file.set('Run_Time', 'HTTPport', '80')
+           if not config_file.has_section('Domain'):
+               config_file.add_section('Domain')
+               if domain is not None:
+                   config_file.set('Domain', 'SiteName', domain.name)
+                   config_file.set('Domain', 'IP', domain.IP)
+                   config_file.set('Domain', 'TTL', domain.TTL)
+                   config_file.set('Domain', 'Port', domain.port)
+                   config_file.set('Domain', 'Admin', domain.admin)
+           elif config_file.has_section('Domain'):
+               if domain is not None:
+                   config_file.set('Domain', 'SiteName', domain.name)
+                   config_file.set('Domain', 'IP', domain.IP)
+                   config_file.set('Domain', 'TTL', domain.TTL)
+                   config_file.set('Domain', 'Port', domain.port)
+                   config_file.set('Domain', 'Admin', domain.admin)
+           print 'Writing to file: ' + currentFile
+           with open(currentFile, 'w') as configfile:
+               config_file.write(configfile)
+        except IOError:
+            print 'File not found, specify a valid file'
+            sys.exit(1)
+
+    def set_DNSport(self, port):
+        if port is not None:
+            self.port = port
+            
+
+    def get_DNSport(self):
         return self.port
+
+    def set_HTTPport(self, port):
+        if port is not None:
+            self.http_port = port
+
+    def get_HTTPport(self):
+        return self.http_port
+        
+    def set_save(self, save=None):
+        if save is not None:
+            self.save = save
 
     def startServers(self):
         #Port for either services will be set at launch on terminal or config file
-        #Initialize and run the DNS services
-        myController = Controller.Controller()
-        server = [SocketServer.ThreadingUDPServer(('', 53), myController.UDPRequestHandler),]
+        # run the DNS services
+        myController = Controller.Controller(self)
+        self.launchOptions(myController)
+        server = [SocketServer.ThreadingUDPServer(('', self.port), myController.UDPRequestHandler),]
         thread = threading.Thread(target=server[0].serve_forever)
         thread.daemon = True
         thread.start()
-        print 'UDP server loop running' #in thread: %s % (thread.name)
+        print 'UDP server loop running on port ' + str(self.port) #in thread: %s % (thread.name)
 
         #Initialize and run HTTP services
-        http_server = Http_start()
+        self.setLists()
+        http_server = Http_start(self.http_port)
         http_server.start()
         try:
             while 1:
@@ -97,3 +248,24 @@ class IOitems(object):
         finally:
                server[0].shutdown()
 
+    def launchOptions(self, controller):
+         parser = argparse.ArgumentParser(description='This program forwards DNS requests not found in the whitelist or blacklist')
+         parser.add_argument('-dp', '--dns_port', help='select the port the DNS server runs on. Default port 53', type=int)
+         parser.add_argument('-wf', '--whiteFile', help='specify the file to be used as the whitelist', type=str)
+         parser.add_argument('-bf', '--blackFile', help='specify the file to be used as the blacklist', type=str)
+         parser.add_argument('-hp', '--http_port', help='select the port the HTTP server runs on. Default port 80 or 8080', type=int)
+         parser.add_argument('-s', '--save_option', help='saves the launch options selected in the config file, select yes or no', default=False, action='store_true')
+         parser.add_argument('-cf', '--readfile', help='select the config file to load and save from', type=str)
+         arg = parser.parse_args()
+         self.set_DNSport(arg.dns_port)
+         #controller.set_wFile(arg.whiteFile) 
+         #controller.set_bFile(arg.blackFile)
+         self.set_HTTPport(arg.http_port) #needed if value is set but did not want to save
+         self.set_save(arg.save_option)
+         if arg.save_option == True:
+             if arg.readfile is not None:
+                 print 'Saving to new config file'
+                 self.writeToConfig(arg.readfile, arg.dns_port, arg.whiteFile, arg.blackFile, arg.http_port)
+             else:
+                 print 'Saving settings'
+                 self.writeToConfig('config.ini', str(arg.dns_port), arg.whiteFile, arg.blackFile, str(arg.http_port))
