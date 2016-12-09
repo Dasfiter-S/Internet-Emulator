@@ -6,6 +6,7 @@ import Controller
 import os
 import argparse
 import ConfigParser
+import SimpleHTTPServer
 from dnslib import *
 from multiprocessing.dummy import Pool as ThreadPool
 
@@ -43,32 +44,42 @@ class Http_start(threading.Thread):
         self.port = port
 
     def run(self):
-        os.system('sudo python -m SimpleHTTPServer ' + str(self.port))
+            print 'Serving HTTP at port', self.port
+            http_handler = SimpleHTTPServer.SimpleHTTPRequestHandler
+            http = SocketServer.TCPServer(('', int(self.port)), http_handler)
+            http.serve_forever()
 
 class RunTimeItems(object):
-    def __init__(self, whiteList=None, blackList=None):
+    def __init__(self, whiteList=None, blackList=None, saveOption=None):
         self.whitelist = whiteList
         self.blacklist = blackList
+        self.save = saveOption
 
     def setLists(self):
-        if self.save == True and Val is None:
+        if self.save is None and (self.blacklist is not None or self.whitelist is not None):
+             print 'Skipping saves for lists'
              return
-        temp = IOitems()
-        items = temp.loadConfig()
-        self.whitelist = items['Whitelist']
-        self.blacklist = items['Blacklist']
+        else:
+            temp = IOitems()
+            items = temp.loadConfig()
+            self.whitelist = items['Whitelist']
+            self.blacklist = items['Blacklist']
 
 class IOitems(object):
-    def __init__(self, port=53, hport=None, saveOption=None):
+    def __init__(self, port=53, hport=None, saveOption=None, wFile=None, bFile=None):
         self.port = port
         self.http_port = hport
         self.save = saveOption
+        self.whitelist = wFile
+        self.blacklist = bFile
     
     def setLists(self):
-        print 'Reading'
-        temp = IOitems()
-        items = temp.loadConfig()
-        self.http_port = items['HTTPport']
+        if self.save == False and self.http_port is not None:
+             return
+        else:
+            temp = IOitems()
+            items = temp.loadConfig()
+            self.http_port = items['HTTPport']
 
     def loadFile(self, currentFile):
         try:
@@ -160,6 +171,7 @@ class IOitems(object):
                    config_file.set('Run_Time', 'Blacklist', blackFile)
                if http_port is not None:
                    config_file.set('Run_Time', 'HTTPport', http_port)
+                   print 'PORT HTTP: ' + http_port
            elif not config_file.has_section('Run_Time'):
                #create config section
                print 'Adding section and items'
@@ -206,7 +218,6 @@ class IOitems(object):
     def set_DNSport(self, port):
         if port is not None:
             self.port = port
-            
 
     def get_DNSport(self):
         return self.port
@@ -222,11 +233,19 @@ class IOitems(object):
         if save is not None:
             self.save = save
 
+    def set_wFile(self, inFile):
+        if inFile is not None:
+             self.whitefile = inFile
+
+    def set_bFile(self, inFile):
+        if inFile is not None:
+             self.blackfile = inFile
+
     def startServers(self):
         #Port for either services will be set at launch on terminal or config file
         # run the DNS services
         myController = Controller.Controller(self)
-        self.launchOptions(myController)
+        self.launchOptions()
         server = [SocketServer.ThreadingUDPServer(('', self.port), myController.UDPRequestHandler),]
         thread = threading.Thread(target=server[0].serve_forever)
         thread.daemon = True
@@ -236,6 +255,7 @@ class IOitems(object):
         #Initialize and run HTTP services
         self.setLists()
         http_server = Http_start(self.http_port)
+        http_server.daemon = True
         http_server.start()
         try:
             while 1:
@@ -248,7 +268,7 @@ class IOitems(object):
         finally:
                server[0].shutdown()
 
-    def launchOptions(self, controller):
+    def launchOptions(self):
          parser = argparse.ArgumentParser(description='This program forwards DNS requests not found in the whitelist or blacklist')
          parser.add_argument('-dp', '--dns_port', help='select the port the DNS server runs on. Default port 53', type=int)
          parser.add_argument('-wf', '--whiteFile', help='specify the file to be used as the whitelist', type=str)
@@ -258,14 +278,19 @@ class IOitems(object):
          parser.add_argument('-cf', '--readfile', help='select the config file to load and save from', type=str)
          arg = parser.parse_args()
          self.set_DNSport(arg.dns_port)
-         #controller.set_wFile(arg.whiteFile) 
-         #controller.set_bFile(arg.blackFile)
+         self.set_wFile(arg.whiteFile)
+         self.set_bFile(arg.blackFile)
          self.set_HTTPport(arg.http_port) #needed if value is set but did not want to save
          self.set_save(arg.save_option)
-         if arg.save_option == True:
-             if arg.readfile is not None:
+         if arg.save_option == True: #this function prevents the program from saving garbage values if only -s is selected without params
+             nullChoices = 0         #if it is run without paramaters to save, don't save
+             argSize = len(vars(arg)) - 1
+             for value in vars(arg):
+                 if getattr(arg, value) == None:
+                     nullChoices = nullChoices + 1
+             if arg.readfile == True and nullChoices < argSize:
                  print 'Saving to new config file'
-                 self.writeToConfig(arg.readfile, arg.dns_port, arg.whiteFile, arg.blackFile, arg.http_port)
-             else:
+                 self.writeToConfig(arg.readfile, str(arg.dns_port), arg.whiteFile, arg.blackFile, str(arg.http_port))
+             elif arg.readfile == False and nullChoices < argSize:
                  print 'Saving settings'
                  self.writeToConfig('config.ini', str(arg.dns_port), arg.whiteFile, arg.blackFile, str(arg.http_port))

@@ -4,9 +4,9 @@ import traceback
 import SocketServer
 import datetime
 import time
-#import argparse
 import threading
 import Model
+import View
 from dnslib import *
 
 class Controller(Model.IOitems):
@@ -14,6 +14,7 @@ class Controller(Model.IOitems):
     #lists. If the address is not found then it is forwarded to an external DNS to resolve. Forwarded
     #requests send the raw query data and receive raw data.
     def dns_response(self, data):
+        log = View.View()
         request = DNSRecord.parse(data)
         print 'Searching: '
         print request
@@ -21,19 +22,22 @@ class Controller(Model.IOitems):
         qn = request.q.qname
         strQuery = repr(qn)                            #remove class formatting
         strQuery = strQuery[12:-2]                     #DNSLabel type, strip class and take out string 
-
+        
         #Will be able to specify files via terminal launch 
-        temp = Model.RunTimeItems()
+        whitelist = self.whitelist
+        blacklist = self.blacklist
+        save = self.save
+        temp = Model.RunTimeItems(whitelist, blacklist, save)
+        log.add_log('wFile ' + str(self.whitelist) + '   bFile: ' + str(self.blacklist) + '   save: ' + str(self.save))
         temp.setLists()
         domainList = self.loadFile(temp.whitelist)
         domainDict = dict(domainList)
         blackList = self.loadFile(temp.blacklist)
         blackDictionary = dict(blackList)
-        print 'WL: ' + temp.whitelist
-        print 'BL: ' + temp.blacklist
-        #self.printThreads(threading.currentThread(), threading.enumerate())
+#        log.add_log(threading.currentThread()) 
+#        log.add_log(threading.enumerate())
         if blackDictionary.get(strQuery):              
-            reply.add_answer(RR(rname=qn, rtype=1, rclass=1, ttl=300, rdata=A('`127.0.0.1')))
+            reply.add_answer(RR(rname=qn, rtype=1, rclass=1, ttl=300, rdata=A('127.0.0.1')))
         else:
             if domainDict.get(strQuery):
                 reply.add_answer(RR(rname=qn, rtype=1, rclass=1, ttl=300, rdata=A(domainDict[strQuery])))
@@ -44,12 +48,14 @@ class Controller(Model.IOitems):
                     answerData, fromaddr = realDNS.recvfrom(1024)
                     realDNS.close()
                     readableAnswer = DNSRecord.parse(answerData) 
-                    print '--------- Reply:\n', readableAnswer
+                    print'--------- Reply:\n'
+                    print str(readableAnswer)
                     return answerData 
                 except socket.gaierror: 
                     print '-------------NOT A VALID ADDRESS--------------'
  
-        print '--------- Reply:\n', reply
+        print '--------- Reply:\n'
+        print reply
         return reply.pack()   # replies with an empty pack if address is not found
 
     def set_wFile(self, infile=None):
@@ -89,22 +95,6 @@ class Controller(Model.IOitems):
                 self.send_data(Controller().dns_response(data))
             except Exception:
                 traceback.print_exc(file=sys.stderr)
-
-
-    class TCPRequestHandler(BaseRequestHandler):
-
-        def get_data(self):
-            data = self.request.recv(8192)
-            sz = int(data[:2].encode('hex'), 16)
-            if sz < len(data) - 2:
-                raise Exception('Wrong size of TCP packet')
-            elif sz > len(data) - 2:
-                raise Exception('Too big TCP packet')
-            return data[2:]
-
-        def send_data(self, data):
-            sz  = hex(len(data))[2:].zfill(4).decode('hex')
-            return self.request.sendall(sz + data)
 
     class UDPRequestHandler(BaseRequestHandler, ):
 
