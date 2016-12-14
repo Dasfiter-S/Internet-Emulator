@@ -7,6 +7,12 @@ import os
 import argparse
 import ConfigParser
 import SimpleHTTPServer
+import BaseHTTPServer
+import urllib
+import posixpath
+import shutil
+import cgi
+import ssl
 from dnslib import *
 from multiprocessing.dummy import Pool as ThreadPool
 
@@ -44,10 +50,187 @@ class Http_start(threading.Thread):
         self.port = port
 
     def run(self):
+        try:
             print 'Serving HTTP at port', self.port
-            http_handler = SimpleHTTPServer.SimpleHTTPRequestHandler
-            http = SocketServer.TCPServer(('', int(self.port)), http_handler)
+            http = SocketServer.TCPServer(('', int(self.port)), MyRequestHandler)
             http.serve_forever()
+        except KeyboardInterrupt:
+            http.server_close()
+
+class Https_start(threading.Thread):
+    def __init__(self, port=None):
+        threading.Thread.__init__(self)
+        self.port = port
+
+    def run(self):
+        try:
+            print 'Serving HTTPS at port', self.port
+            #getReqHandler = MyRequestHandler()
+            https = BaseHTTPServer.HTTPServer(('', int(self.port)), MyRequestHandler)
+            https.socket = ssl.wrap_socket(https.socket, certfile='./server.crt', server_side=True, keyfile='server.key')
+            https.serve_forever()
+        except KeyboardInterrupt:
+            https.close()
+
+class MyRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
+
+    def do_head(self):
+        self.send_response(200)
+        self.send_header('Contant-type', 'text/html')
+        self.end_headers()
+
+    def send_head(self):
+        path = self.translate_path(self.path)
+        f = None
+        if os.path.isdir(path):
+            if not self.path.endswith('/'):
+                self.send_response(301)
+                self.send_header('Location', self.path + '/')
+                self.end_headers()
+                return None
+            for index in 'index.html', 'index.htm':
+                index = os.path.join(path, index)
+                if os.path.exists(index):
+                    path = index
+                    break
+        #take the path of  the index found from the executed file and use it as a root
+        #need to upgrade to use absolute paths
+        try:
+            path = path[:-13]
+            path = path + self.path + './index.html'
+            f = open(path, 'rb')
+        except IOError:
+            self.send_error(404, 'File not found')
+            return None
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html')#ctype)
+        fs = os.fstat(f.fileno())
+        self.send_header('Content-Length', str(fs[6])) #supposedly obsolete. Leave in?
+        self.send_header('Last-Modified', self.date_time_string(fs.st_mtime))
+        self.end_headers()
+        return f
+
+    def translate_path(self, path):
+        path = path.split('/',1)[0]
+        path = path.split('#',1)[0]
+        path = posixpath.normpath(urllib.unquote(path))
+        words = path.split('/')
+        words = filter(None,words)
+        path = os.getcwd()
+        for word in words:
+            drive, word = os.path.splitdrive(word)
+            head, word = os.path.split(word)
+            if word  in (os.curdir, os.pardir):
+                path = os.path.join(path, word)
+        return path
+        
+    def copyfile(self, source, outputfile):
+        shutil.copyfileobj(source, outputfile)
+
+    def guess_type(self, path):
+        base, ext = posixpath.splitext(path)
+        if ext in self.extensions_map:
+            return self.extensions_map[ext]
+        ext = ext.lower()
+        if ext in self.extensions_map:
+            return self.extensions_map[ext]
+        else:
+            return self.extensions_map['']
+
+
+    def info(self):
+        self.wfile.write('<html>')
+        self.wfile.write('  <head>')
+        self.wfile.write('    <title>This is a test.')
+        self.wfile.write('    </title>')
+        self.wfile.write('  </head>')
+        self.wfile.write('  <h1>Enjoy this minimalistic page.')
+        self.wfile.write('    <br>')
+        self.wfile.write('    <br>')
+        self.wfile.write('      <p>Carry on.')
+        self.wfile.write('     </p>')
+        self.wfile.write('        </body>')
+        self.wfile.write('  </h1>')
+        self.wfile.write('</html>')
+       
+    def response(self):
+         f = self.send_head()
+         if f:
+             self.copyfile(f, self.wfile)
+             f.close()
+        
+
+    def do_GET(self):
+        if self.path == '/test-pages/':
+            self.response()
+        elif self.path == '/test-pages':
+            self.response()
+        elif self.path == '/test-pages/test1':
+            self.response()
+        elif self.path == '/test-pages/test1/':
+            self.response()
+        elif self.path == '/test-pages/test2':
+            self.response()
+        elif self.path == '/test-pages/test2/':
+            self.response()
+        elif self.path == '/test-pages/test3':
+            self.response()
+        elif self.path == '/test-pages/test3/':
+            self.response()
+        elif self.path == '/test-pages/test4':
+            self.response()
+        elif self.path == '/test-pages/test4/':
+            self.response()
+
+        else:
+            self.send_error(404, 'File not found: %s'% self.path)
+
+        def do_POST(self):
+            ctype, pdict = cgi,parse_header(self.headers['content-type'])
+            if cytpe == 'multipart/form-data':
+                postvars = cgi.parse_multipart(self.rfile, pdict)
+            elif ctype == 'application/x-www-form-urlencoded':
+                length = int(self.headers['content-length']) #I thought content length was obsolete
+                postvars = cgi.parse_qs(self.rfile.read(length), keep_blank_values=1)
+            else:
+                postvars = {}
+
+            back = self.path if self.path.find('?') < 0 else self.path[:self.path.find('?')]
+            if len(postvars):
+                i = 0
+                for key in sorted(postvars):
+                    i += 1
+
+            self.send_response(200)
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
+        
+            self.wfile.write('<html>')
+            self.wfile.write('  <head>')
+            self.wfile.write('    <title>Server POST Response</title>')
+            self.wfile.write('  </head>')
+            self.wfile.write('  <body>')
+            self.wfile.write('    <p>POST variables (%d).</p>'%(len(postvars)))
+
+            if len(postvars):
+                self.wfile.write('    <table>')
+                self.wfile.write('      <tbody>')
+                i = 0
+                for key in sorted(postvar):
+                    i += 1
+                    val = postvars[key]
+                    self.wfile.write('        <tr>')
+                    self.wfile.write('          <td align="right">%d</td>'%(i))
+                    self.wfile.write('          <td align="right">%s</td?'%key)
+                    self.wfile.write('          <td align="left">%s</td?'%val)
+                    self.wfile.write('        </tr>')
+                self.wfile.write('      </tbody>')
+                self.wfile.write('    </table>')
+
+            self.wfile.write('    <p><a href="%s">Back</a></p?'%(back))
+            self.wfile.write('  </body>')
+            self.wfile.write('</html>')
+        return self
 
 class RunTimeItems(object):
     def __init__(self, whiteList=None, blackList=None, saveOption=None):
@@ -57,7 +240,7 @@ class RunTimeItems(object):
 
     def setLists(self):
         if self.save is None and (self.blacklist is not None or self.whitelist is not None):
-             print 'Skipping saves for lists'
+             print 'Skipping list save for Wf and Bf'
              return
         else:
             temp = IOitems()
@@ -66,20 +249,22 @@ class RunTimeItems(object):
             self.blacklist = items['Blacklist']
 
 class IOitems(object):
-    def __init__(self, port=53, hport=None, saveOption=None, wFile=None, bFile=None):
+    def __init__(self, port=53, hport=None, hsport=None, saveOption=None, wFile=None, bFile=None):
         self.port = port
         self.http_port = hport
+        self.https_port = hsport
         self.save = saveOption
         self.whitelist = wFile
         self.blacklist = bFile
     
     def setLists(self):
-        if self.save == False and self.http_port is not None:
+        if self.save == False and (self.http_port is not None or self.https_port is not None):
              return
         else:
             temp = IOitems()
             items = temp.loadConfig()
             self.http_port = items['HTTPport']
+            self.https_port = items['HTTPSport']
 
     def loadFile(self, currentFile):
         try:
@@ -137,6 +322,8 @@ class IOitems(object):
                     serverConfig['Blacklist'] = readfile.get('Run_Time', 'Blacklist')
                 if readfile.has_option('Run_Time', 'HTTPport'):
                     serverConfig['HTTPport'] = readfile.get('Run_Time', 'HTTPport') 
+                if readfile.has_option('Run_Time', 'HTTPSport'):
+                    serverConfig['HTTPSport'] = readfile.get('Run_Time', 'HTTPSport')
             if not readfile.has_section('Domain'):
                 print 'File missing Domain section'
             elif readfile.has_section('Domain'):
@@ -156,7 +343,7 @@ class IOitems(object):
             print 'File not found, specify a valid file'
             sys.exit(1)
 
-    def writeToConfig(self, currentFile=None, DNSport=None, whiteFile=None, blackFile=None, http_port=None, domain=None):
+    def writeToConfig(self, currentFile=None, DNSport=None, whiteFile=None, blackFile=None, http_port=None, https_port=None, domain=None):
         try:
            config_file = ConfigParser.ConfigParser()
            config_file.read(currentFile)
@@ -171,7 +358,8 @@ class IOitems(object):
                    config_file.set('Run_Time', 'Blacklist', blackFile)
                if http_port is not None:
                    config_file.set('Run_Time', 'HTTPport', http_port)
-                   print 'PORT HTTP: ' + http_port
+               if https_port is not None:
+                   config_file.set('Run_Time', 'HTTPSport', https_port)
            elif not config_file.has_section('Run_Time'):
                #create config section
                print 'Adding section and items'
@@ -180,7 +368,6 @@ class IOitems(object):
                    config_file.set('Run_Time', 'DNSport', DNSport)
                else:
                    config_file.set('Run_Time', 'DNSport', '8000')
-               #migrate white and black list to config file?
                if whiteFile is not None:
                    config_file.set('Run_Time', 'Whitelist', whiteFile)
                else:
@@ -193,6 +380,10 @@ class IOitems(object):
                    config_file.set('Run_Time', 'HTTPport', http_port)
                else:
                    config_file.set('Run_Time', 'HTTPport', '80')
+               if https_port is not None:
+                   config_file.set('Run_Time', 'HTTPSport', https_port)
+               else:
+                   config_file.set('Run_Time', 'HTTPSport', '443')
            if not config_file.has_section('Domain'):
                config_file.add_section('Domain')
                if domain is not None:
@@ -228,6 +419,9 @@ class IOitems(object):
 
     def get_HTTPport(self):
         return self.http_port
+
+    def set_HTTPSport(self, port):
+        self.https_port = port
         
     def set_save(self, save=None):
         if save is not None:
@@ -257,6 +451,12 @@ class IOitems(object):
         http_server = Http_start(self.http_port)
         http_server.daemon = True
         http_server.start()
+
+        #initialize and run HTTPS services
+        https_server = Https_start(self.https_port)
+        https_server.daemon = True
+        https_server.start()
+
         try:
             while 1:
                 time.sleep(1)
@@ -267,6 +467,7 @@ class IOitems(object):
             pass
         finally:
                server[0].shutdown()
+               print 'Server terminated by SIGINT'
 
     def launchOptions(self):
          parser = argparse.ArgumentParser(description='This program forwards DNS requests not found in the whitelist or blacklist')
@@ -275,12 +476,14 @@ class IOitems(object):
          parser.add_argument('-bf', '--blackFile', help='specify the file to be used as the blacklist', type=str)
          parser.add_argument('-hp', '--http_port', help='select the port the HTTP server runs on. Default port 80 or 8080', type=int)
          parser.add_argument('-s', '--save_option', help='saves the launch options selected in the config file, select yes or no', default=False, action='store_true')
+         parser.add_argument('-hsp', '--https_port', help='select the port the HTTPS server runs on. Default port 443', type=int)
          parser.add_argument('-cf', '--readfile', help='select the config file to load and save from', type=str)
          arg = parser.parse_args()
          self.set_DNSport(arg.dns_port)
          self.set_wFile(arg.whiteFile)
          self.set_bFile(arg.blackFile)
          self.set_HTTPport(arg.http_port) #needed if value is set but did not want to save
+         self.set_HTTPSport(arg.https_port)
          self.set_save(arg.save_option)
          if arg.save_option == True: #this function prevents the program from saving garbage values if only -s is selected without params
              nullChoices = 0         #if it is run without paramaters to save, don't save
@@ -290,7 +493,7 @@ class IOitems(object):
                      nullChoices = nullChoices + 1
              if arg.readfile == True and nullChoices < argSize:
                  print 'Saving to new config file'
-                 self.writeToConfig(arg.readfile, str(arg.dns_port), arg.whiteFile, arg.blackFile, str(arg.http_port))
+                 self.writeToConfig(arg.readfile, str(arg.dns_port), arg.whiteFile, arg.blackFile, str(arg.http_port), str(arg.https_port))
              elif arg.readfile == False and nullChoices < argSize:
                  print 'Saving settings'
-                 self.writeToConfig('config.ini', str(arg.dns_port), arg.whiteFile, arg.blackFile, str(arg.http_port))
+                 self.writeToConfig('config.ini', str(arg.dns_port), arg.whiteFile, arg.blackFile, str(arg.http_port), str(arg.https_port))

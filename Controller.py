@@ -7,6 +7,7 @@ import time
 import threading
 import Model
 import View
+import urlparse
 from dnslib import *
 
 class Controller(Model.IOitems):
@@ -21,8 +22,7 @@ class Controller(Model.IOitems):
         reply = DNSRecord(DNSHeader(id=request.header.id, qr=1, aa=1, ra=1), q=request.q)
         qn = request.q.qname
         strQuery = repr(qn)                            #remove class formatting
-        strQuery = strQuery[12:-2]                     #DNSLabel type, strip class and take out string 
-        
+        strQuery = strQuery[12:-2]                     #DNSLabel type, strip class and take out string  
         #Will be able to specify files via terminal launch 
         whitelist = self.whitelist
         blacklist = self.blacklist
@@ -34,8 +34,10 @@ class Controller(Model.IOitems):
         domainDict = dict(domainList)
         blackList = self.loadFile(temp.blacklist)
         blackDictionary = dict(blackList)
-#        log.add_log(threading.currentThread()) 
-#        log.add_log(threading.enumerate())
+#        print(threading.currentThread()) 
+#        print(threading.enumerate())
+        address = urlparse.urlparse(strQuery)
+        #print str(address)
         if blackDictionary.get(strQuery):              
             reply.add_answer(RR(rname=qn, rtype=1, rclass=1, ttl=300, rdata=A('127.0.0.1')))
         else:
@@ -57,20 +59,6 @@ class Controller(Model.IOitems):
         print '--------- Reply:\n'
         print reply
         return reply.pack()   # replies with an empty pack if address is not found
-
-    def set_wFile(self, infile=None):
-        if infile is not None:
-            self.whitelist = infile
-
-    def get_wFile(self):
-        return self.whitelist
-
-    def set_bFile(self, infile=None):
-        if infile is not None:
-            self.blacklist = infile
-    
-    def get_bFile(self):
-        return self.blacklist
 
     def printThreads(self, currentThread, tnum):
         print 'Current thread: ' + str(currentThread)
