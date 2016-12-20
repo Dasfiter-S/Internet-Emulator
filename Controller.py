@@ -20,25 +20,22 @@ class Controller(Model.IOitems):
         print 'Searching: '
         print request
         reply = DNSRecord(DNSHeader(id=request.header.id, qr=1, aa=1, ra=1), q=request.q)
-        qn = request.q.qname
-        strQuery = repr(qn)                            #remove class formatting
+        queryName = request.q.qname
+        strQuery = repr(queryName)                            #remove class formatting
         strQuery = strQuery[12:-2]                     #DNSLabel type, strip class and take out string  
-        #Will be able to specify files via terminal launch 
+
         whitelist = self.whitelist
         blacklist = self.blacklist
         save = self.save
         temp = Model.RunTimeItems(whitelist, blacklist, save)
-        log.add_log('wFile ' + str(self.whitelist) + '   bFile: ' + str(self.blacklist) + '   save: ' + str(self.save))
+        print('wFile ' + str(self.whitelist) + '   bFile: ' + str(self.blacklist) + '   save: ' + str(self.save))
         temp.setLists()
         domainList = self.loadFile(temp.whitelist)
         domainDict = dict(domainList)
         blackList = self.loadFile(temp.blacklist)
         blackDictionary = dict(blackList)
-#        print(threading.currentThread()) 
-#        print(threading.enumerate())
         address = urlparse.urlparse(strQuery)
-        #print str(address)
-        if blackDictionary.get(strQuery):              
+        if blackDictionary.get(strQuery):#or blackDictionary(address.netloc):              
             reply.add_answer(RR(rname=qn, rtype=1, rclass=1, ttl=300, rdata=A('127.0.0.1')))
         else:
             if domainDict.get(strQuery):

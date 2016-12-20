@@ -16,6 +16,7 @@ import ssl
 from dnslib import *
 from multiprocessing.dummy import Pool as ThreadPool
 
+
 class DomainItem():
 
     def __init__(self, inName = 'thistest.com', inIP = '127.0.0.100', inTTL = 300, inPort = 53, inAdmin = 'admin'):
@@ -65,14 +66,196 @@ class Https_start(threading.Thread):
     def run(self):
         try:
             print 'Serving HTTPS at port', self.port
-            #getReqHandler = MyRequestHandler()
             https = BaseHTTPServer.HTTPServer(('', int(self.port)), MyRequestHandler)
             https.socket = ssl.wrap_socket(https.socket, certfile='./server.crt', server_side=True, keyfile='server.key')
             https.serve_forever()
         except KeyboardInterrupt:
             https.close()
 
+class VS1_start(threading.Thread):
+    def __init__(self, port=8000):
+        threading.Thread.__init__(self)
+        self.port = port
+
+    def run(self):
+        try:
+            print 'HTTPS VS1 on port', self.port
+            VS1 = BaseHTTPServer.HTTPServer(('', int(self.port)), VS1Handler)
+            VS1.socket = ssl.wrap_socket(VS1.socket, certfile='./server.crt', server_side=True, keyfile='server.key')
+            VS1.serve_forever()
+        except KeyboardInterrupt:
+            VS1.close()
+
+
+class VS2_start(threading.Thread):
+    def __init__(self, port=8001):
+        threading.Thread.__init__(self)
+        self.port = port
+
+    def run(self):
+        try:
+            print 'HTTPS VS2 on port', self.port
+            VS2 = BaseHTTPServer.HTTPServer(('', int(self.port)), VS2Handler)
+            VS2.socket = ssl.wrap_socket(VS2.socket, certfile='./server.crt', server_side=True, keyfile='server.key')
+            VS2.serve_forever()
+        except KeyboardInterrupt:
+            VS2.close()
+
 class MyRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
+
+    server_version = 'nginx'
+    sys_version = ''
+    pathways = {'/test-pages': 'https://127.0.0.1/test-pages', 
+                '/test-pages/': 'https://127.0.0.1/test-pages/',
+                '/test-pages/test1': 'https://127.0.0.1:8000/test-pages/test1',
+                'test-pages/test1/': 'https://127.0.0.1:8000/test-pages/test1/',
+                '/test-pages/test2': 'https://127.0.0.1:8001/test-pages/test2',
+                '/test-pages/test2/': 'https://127.0.0.1:8001/test-pages/test2/'
+               }
+    page_get_fail = 'http://youfaileverything.org'
+    def do_HEAD(self):
+        self.send_response(301)
+        self.send_header('Location', self.pathways.get(self.path, self.page_get_fail))
+        self.end_headers()
+
+#    def do_HEAD(self):
+#        self.send_response(301)
+#        self.send_header('Location', 'https://127.0.0.1:8000/test-pages/test1')
+#        self.end_headers()
+
+    def send_head_commented_out(self):
+        path = self.translate_path(self.path)
+        f = None
+        if os.path.isdir(path):
+            if not self.path.endswith('/'):
+                self.send_response(301)
+                self.send_header('Location', self.path + '/')
+                self.end_headers()
+                return None
+            for index in 'index.html', 'index.htm':
+                index = os.path.join(path, index)
+                if os.path.exists(index):
+                    path = index
+                    break
+        #take the path of  the index found from the executed file and use it as a root
+        #need to upgrade to use absolute paths
+        try:
+            path = path[:-13]
+            path = path + self.path + './index.html'
+            f = open(path, 'rb')
+        except IOError:
+            self.send_error(404, 'File not found')
+            return None
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html')
+        fs = os.fstat(f.fileno())
+        self.send_header('Content-Length', str(fs[6])) 
+        self.send_header('Last-Modified', self.date_time_string(fs.st_mtime))
+        self.end_headers()
+        return f
+
+    def translate_path(self, path):
+        path = path.split('/',1)[0]
+        path = path.split('#',1)[0]
+        path = posixpath.normpath(urllib.unquote(path))
+        words = path.split('/')
+        words = filter(None,words)
+        path = os.getcwd()
+        for word in words:
+            drive, word = os.path.splitdrive(word)
+            head, word = os.path.split(word)
+            if word  in (os.curdir, os.pardir):
+                path = os.path.join(path, word)
+        return path
+        
+    def copyfile(self, source, outputfile):
+        shutil.copyfileobj(source, outputfile)
+
+    def response(self):
+         f = self.send_head()
+         if f:
+             self.copyfile(f, self.wfile)
+             f.close()
+
+    def do_GET(self):
+        self.do_HEAD()
+
+    def do_GET_commented_out(self):
+        if self.path == '/test-pages/':
+            self.response()
+        elif self.path == '/test-pages':
+            self.response()
+        elif self.path == '/test-pages/test1':
+            self.response()
+        elif self.path == '/test-pages/test1/':
+            self.response()
+        elif self.path == '/test-pages/test2':
+            self.response()
+        elif self.path == '/test-pages/test2/':
+            self.response()
+        elif self.path == '/test-pages/test3':
+            self.response()
+        elif self.path == '/test-pages/test3/':
+            self.response()
+        elif self.path == '/test-pages/test4':
+            self.response()
+        elif self.path == '/test-pages/test4/':
+            self.response()
+
+        else:
+            self.send_error(404, 'File not found: %s'% self.path)
+
+        def do_POST(self):
+            ctype, pdict = cgi,parse_header(self.headers['content-type'])
+            if cytpe == 'multipart/form-data':
+                postvars = cgi.parse_multipart(self.rfile, pdict)
+            elif ctype == 'application/x-www-form-urlencoded':
+                length = int(self.headers['content-length']) #I thought content length was obsolete
+                postvars = cgi.parse_qs(self.rfile.read(length), keep_blank_values=1)
+            else:
+                postvars = {}
+
+            back = self.path if self.path.find('?') < 0 else self.path[:self.path.find('?')]
+            if len(postvars):
+                i = 0
+                for key in sorted(postvars):
+                    i += 1
+
+            self.send_response(200)
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
+        
+            self.wfile.write('<html>')
+            self.wfile.write('  <head>')
+            self.wfile.write('    <title>Server POST Response</title>')
+            self.wfile.write('  </head>')
+            self.wfile.write('  <body>')
+            self.wfile.write('    <p>POST variables (%d).</p>'%(len(postvars)))
+
+            if len(postvars):
+                self.wfile.write('    <table>')
+                self.wfile.write('      <tbody>')
+                i = 0
+                for key in sorted(postvar):
+                    i += 1
+                    val = postvars[key]
+                    self.wfile.write('        <tr>')
+                    self.wfile.write('          <td align="right">%d</td>'%(i))
+                    self.wfile.write('          <td align="right">%s</td?'%key)
+                    self.wfile.write('          <td align="left">%s</td?'%val)
+                    self.wfile.write('        </tr>')
+                self.wfile.write('      </tbody>')
+                self.wfile.write('    </table>')
+
+            self.wfile.write('    <p><a href="%s">Back</a></p?'%(back))
+            self.wfile.write('  </body>')
+            self.wfile.write('</html>')
+        return self
+
+class VS1Handler(BaseHTTPServer.BaseHTTPRequestHandler):
+
+    server_version = 'IIS'
+    sys_version = ''
 
     def do_head(self):
         self.send_response(200)
@@ -84,7 +267,159 @@ class MyRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         f = None
         if os.path.isdir(path):
             if not self.path.endswith('/'):
-                self.send_response(301)
+                self.send_response(200)
+                self.send_header('Location', self.path + '/')
+                self.end_headers()
+                return None
+            for index in 'index.html', 'index.htm':
+                index = os.path.join(path, index)
+                if os.path.exists(index):
+                    path = index
+                    break
+        #take the path of  the index found from the executed file and use it as a root
+        #need to upgrade to use absolute paths
+        try:
+            path = path[:-13]
+            path = path + self.path + './index.html'
+            print 'Current Path: ', path
+            f = open(path, 'rb')
+        except IOError:
+            self.send_error(404, 'File not found')
+            return None
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html')#ctype)
+        fs = os.fstat(f.fileno())
+        self.send_header('Content-Length', str(fs[6])) #supposedly obsolete. Leave in?
+        self.send_header('Last-Modified', self.date_time_string(fs.st_mtime))
+        self.end_headers()
+        return f
+
+    def translate_path(self, path):
+        path = path.split('/',1)[0]
+        path = path.split('#',1)[0]
+        path = posixpath.normpath(urllib.unquote(path))
+        words = path.split('/')
+        words = filter(None,words)
+        path = os.getcwd()
+        for word in words:
+            drive, word = os.path.splitdrive(word)
+            head, word = os.path.split(word)
+            if word  in (os.curdir, os.pardir):
+                path = os.path.join(path, word)
+        return path
+        
+    def copyfile(self, source, outputfile):
+        shutil.copyfileobj(source, outputfile)
+
+    def test_info(self):
+        self.wfile.write('<html>')
+        self.wfile.write('  <head>')
+        self.wfile.write('    <title>This is a test.')
+        self.wfile.write('    </title>')
+        self.wfile.write('  </head>')
+        self.wfile.write('  <h1>Enjoy this minimalistic page.')
+        self.wfile.write('    <br>')
+        self.wfile.write('    <br>')
+        self.wfile.write('      <p>Carry on.')
+        self.wfile.write('     </p>')
+        self.wfile.write('        </body>')
+        self.wfile.write('  </h1>')
+        self.wfile.write('</html>')
+       
+    def response(self):
+         f = self.send_head()
+         if f:
+             self.copyfile(f, self.wfile)
+             f.close()
+
+    def do_GET(self):
+        if self.path == '/test-pages/':
+            self.response()
+        elif self.path == '/test-pages':
+            self.response()
+        elif self.path == '/test-pages/test1':
+            self.response()
+        elif self.path == '/test-pages/test1/':
+            self.response()
+        elif self.path == '/test-pages/test2':
+            self.response()
+        elif self.path == '/test-pages/test2/':
+            self.response()
+        elif self.path == '/test-pages/test3':
+            self.response()
+        elif self.path == '/test-pages/test3/':
+            self.response()
+        elif self.path == '/test-pages/test4':
+            self.response()
+        elif self.path == '/test-pages/test4/':
+            self.response()
+
+        else:
+            self.send_error(404, 'File not found: %s'% self.path)
+
+        def do_POST(self):
+            ctype, pdict = cgi,parse_header(self.headers['content-type'])
+            if cytpe == 'multipart/form-data':
+                postvars = cgi.parse_multipart(self.rfile, pdict)
+            elif ctype == 'application/x-www-form-urlencoded':
+                length = int(self.headers['content-length']) #I thought content length was obsolete
+                postvars = cgi.parse_qs(self.rfile.read(length), keep_blank_values=1)
+            else:
+                postvars = {}
+
+            back = self.path if self.path.find('?') < 0 else self.path[:self.path.find('?')]
+            if len(postvars):
+                i = 0
+                for key in sorted(postvars):
+                    i += 1
+
+            self.send_response(200)
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
+        
+            self.wfile.write('<html>')
+            self.wfile.write('  <head>')
+            self.wfile.write('    <title>Server POST Response</title>')
+            self.wfile.write('  </head>')
+            self.wfile.write('  <body>')
+            self.wfile.write('    <p>POST variables (%d).</p>'%(len(postvars)))
+
+            if len(postvars):
+                self.wfile.write('    <table>')
+                self.wfile.write('      <tbody>')
+                i = 0
+                for key in sorted(postvar):
+                    i += 1
+                    val = postvars[key]
+                    self.wfile.write('        <tr>')
+                    self.wfile.write('          <td align="right">%d</td>'%(i))
+                    self.wfile.write('          <td align="right">%s</td?'%key)
+                    self.wfile.write('          <td align="left">%s</td?'%val)
+                    self.wfile.write('        </tr>')
+                self.wfile.write('      </tbody>')
+                self.wfile.write('    </table>')
+
+            self.wfile.write('    <p><a href="%s">Back</a></p?'%(back))
+            self.wfile.write('  </body>')
+            self.wfile.write('</html>')
+        return self
+
+class VS2Handler(BaseHTTPServer.BaseHTTPRequestHandler):
+
+    server_version = 'gws'
+    sys_version = ''
+
+    def do_head(self):
+        self.send_response(200)
+        self.send_header('Contant-type', 'text/html')
+        self.end_headers()
+
+    def send_head(self):
+        path = self.translate_path(self.path)
+        f = None
+        if os.path.isdir(path):
+            if not self.path.endswith('/'):
+                self.send_response(200)
                 self.send_header('Location', self.path + '/')
                 self.end_headers()
                 return None
@@ -127,18 +462,7 @@ class MyRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     def copyfile(self, source, outputfile):
         shutil.copyfileobj(source, outputfile)
 
-    def guess_type(self, path):
-        base, ext = posixpath.splitext(path)
-        if ext in self.extensions_map:
-            return self.extensions_map[ext]
-        ext = ext.lower()
-        if ext in self.extensions_map:
-            return self.extensions_map[ext]
-        else:
-            return self.extensions_map['']
-
-
-    def info(self):
+    def test_info(self):
         self.wfile.write('<html>')
         self.wfile.write('  <head>')
         self.wfile.write('    <title>This is a test.')
@@ -158,7 +482,157 @@ class MyRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
          if f:
              self.copyfile(f, self.wfile)
              f.close()
+
+    def do_GET(self):
+        if self.path == '/test-pages/':
+            self.response()
+        elif self.path == '/test-pages':
+            self.response()
+        elif self.path == '/test-pages/test1':
+            self.response()
+        elif self.path == '/test-pages/test1/':
+            self.response()
+        elif self.path == '/test-pages/test2':
+            self.response()
+        elif self.path == '/test-pages/test2/':
+            self.response()
+        elif self.path == '/test-pages/test3':
+            self.response()
+        elif self.path == '/test-pages/test3/':
+            self.response()
+        elif self.path == '/test-pages/test4':
+            self.response()
+        elif self.path == '/test-pages/test4/':
+            self.response()
+
+        else:
+            self.send_error(404, 'File not found: %s'% self.path)
+
+        def do_POST(self):
+            ctype, pdict = cgi,parse_header(self.headers['content-type'])
+            if cytpe == 'multipart/form-data':
+                postvars = cgi.parse_multipart(self.rfile, pdict)
+            elif ctype == 'application/x-www-form-urlencoded':
+                length = int(self.headers['content-length']) #I thought content length was obsolete
+                postvars = cgi.parse_qs(self.rfile.read(length), keep_blank_values=1)
+            else:
+                postvars = {}
+
+            back = self.path if self.path.find('?') < 0 else self.path[:self.path.find('?')]
+            if len(postvars):
+                i = 0
+                for key in sorted(postvars):
+                    i += 1
+
+            self.send_response(200)
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
         
+            self.wfile.write('<html>')
+            self.wfile.write('  <head>')
+            self.wfile.write('    <title>Server POST Response</title>')
+            self.wfile.write('  </head>')
+            self.wfile.write('  <body>')
+            self.wfile.write('    <p>POST variables (%d).</p>'%(len(postvars)))
+
+            if len(postvars):
+                self.wfile.write('    <table>')
+                self.wfile.write('      <tbody>')
+                i = 0
+                for key in sorted(postvar):
+                    i += 1
+                    val = postvars[key]
+                    self.wfile.write('        <tr>')
+                    self.wfile.write('          <td align="right">%d</td>'%(i))
+                    self.wfile.write('          <td align="right">%s</td?'%key)
+                    self.wfile.write('          <td align="left">%s</td?'%val)
+                    self.wfile.write('        </tr>')
+                self.wfile.write('      </tbody>')
+                self.wfile.write('    </table>')
+
+            self.wfile.write('    <p><a href="%s">Back</a></p?'%(back))
+            self.wfile.write('  </body>')
+            self.wfile.write('</html>')
+        return self
+
+class VS3Handler(BaseHTTPServer.BaseHTTPRequestHandler):
+
+    serverType = 'cherokee'
+    sys_version = ''
+
+    def do_head(self):
+        self.send_response(200)
+        self.send_header('Contant-type', 'text/html')
+        self.end_headers()
+
+    def send_head(self):
+        path = self.translate_path(self.path)
+        f = None
+        if os.path.isdir(path):
+            if not self.path.endswith('/'):
+                self.send_response(200)
+                self.send_header('Location', self.path + '/')
+                self.end_headers()
+                return None
+            for index in 'index.html', 'index.htm':
+                index = os.path.join(path, index)
+                if os.path.exists(index):
+                    path = index
+                    break
+        #take the path of  the index found from the executed file and use it as a root
+        #need to upgrade to use absolute paths
+        try:
+            path = path[:-13]
+            path = path + self.path + './index.html'
+            f = open(path, 'rb')
+        except IOError:
+            self.send_error(404, 'File not found')
+            return None
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html')#ctype)
+        fs = os.fstat(f.fileno())
+        self.send_header('Content-Length', str(fs[6])) #supposedly obsolete. Leave in?
+        self.send_header('Last-Modified', self.date_time_string(fs.st_mtime))
+        self.end_headers()
+        return f
+
+    def translate_path(self, path):
+        path = path.split('/',1)[0]
+        path = path.split('#',1)[0]
+        path = posixpath.normpath(urllib.unquote(path))
+        words = path.split('/')
+        words = filter(None,words)
+        path = os.getcwd()
+        for word in words:
+            drive, word = os.path.splitdrive(word)
+            head, word = os.path.split(word)
+            if word  in (os.curdir, os.pardir):
+                path = os.path.join(path, word)
+        return path
+        
+    def copyfile(self, source, outputfile):
+        shutil.copyfileobj(source, outputfile)
+
+    def test_info(self):
+        self.wfile.write('<html>')
+        self.wfile.write('  <head>')
+        self.wfile.write('    <title>This is a test.')
+        self.wfile.write('    </title>')
+        self.wfile.write('  </head>')
+        self.wfile.write('  <h1>Enjoy this minimalistic page.')
+        self.wfile.write('    <br>')
+        self.wfile.write('    <br>')
+        self.wfile.write('      <p>Carry on.')
+        self.wfile.write('     </p>')
+        self.wfile.write('        </body>')
+        self.wfile.write('  </h1>')
+        self.wfile.write('</html>')
+       
+    def response(self):
+         f = self.send_head()
+         if f:
+             self.copyfile(f, self.wfile)
+             f.close()
 
     def do_GET(self):
         if self.path == '/test-pages/':
@@ -457,6 +931,13 @@ class IOitems(object):
         https_server.daemon = True
         https_server.start()
 
+        #Initialize Virtual Services
+        VS1_server = VS1_start()
+        VS1_server.daemon = True
+        VS1_server.start()
+        VS2_server = VS2_start()
+        VS2_server.daemon = True
+        VS2_server.start()
         try:
             while 1:
                 time.sleep(1)
