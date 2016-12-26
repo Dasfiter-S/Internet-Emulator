@@ -72,48 +72,24 @@ class Https_start(threading.Thread):
         except KeyboardInterrupt:
             https.close()
 
-class VS1_start(threading.Thread):
-    def __init__(self, port=8000):
+class VS_host(threading.Thread):
+    def __init__(self, port=8000, cert='/Users/ricardocarretero/dev/vm/ubuntu1404/certs/./test1cert.pem', key='/Users/ricardocarretero/dev/vm/ubuntu1404/certs/./test1key.pem', handler= None, name= ''):
         threading.Thread.__init__(self)
         self.port = port
+        self.cert = cert
+        self.key = key
+        self.handler = handler
+        self.name = name
 
     def run(self):
         try:
-            print 'HTTPS VS1 on port', self.port
-            VS1 = BaseHTTPServer.HTTPServer(('', int(self.port)), VS1Handler)
-            VS1.socket = ssl.wrap_socket(VS1.socket, certfile='/Users/ricardocarretero/dev/vm/ubuntu1404/certs/./test1cert.pem', server_side=True, keyfile='/Users/ricardocarretero/dev/vm/ubuntu1404/certs/./test1key.pem')
-            VS1.serve_forever()
+            print 'HTTPS '+ self.name  + ' on port: ', self.port
+            VS = BaseHTTPServer.HTTPServer(('', int(self.port)), self.handler)
+            VS.socket = ssl.wrap_socket(VS.socket, certfile= self.cert, server_side=True, keyfile= self.key)
+            VS.serve_forever()
         except KeyboardInterrupt:
-            VS1.close()
+            VS.close()
 
-
-class VS2_start(threading.Thread):
-    def __init__(self, port=8001):
-        threading.Thread.__init__(self)
-        self.port = port
-
-    def run(self):
-        try:
-            print 'HTTPS VS2 on port', self.port
-            VS2 = BaseHTTPServer.HTTPServer(('', int(self.port)), VS2Handler)
-            VS2.socket = ssl.wrap_socket(VS2.socket, certfile='/Users/ricardocarretero/dev/vm/ubuntu1404/certs/./test2cert.pem', server_side=True, keyfile='/Users/ricardocarretero/dev/vm/ubuntu1404/certs/./test2key.pem')
-            VS2.serve_forever()
-        except KeyboardInterrupt:
-            VS2.close()
-
-class VS3_start(threading.Thread):
-    def __init__(self, port=8002):
-        threading.Thread.__init__(self)
-        self.port = port
-
-    def run(self):
-        try:
-            print 'HTTPS VS3 on port', self.port
-            VS3 = BaseHTTPServer.HTTPServer(('', int(self.port)), VS3Handler)
-            VS3.socket = ssl.wrap_socket(VS3.socket, certfile='/Users/ricardocarretero/dev/vm/ubuntu1404/certs/./test3cert.pem', server_side=True, keyfile='/Users/ricardocarretero/dev/vm/ubuntu1404/certs/./test3key.pem')
-            VS3.serve_forever()
-        except KeyboardInterrupt:
-            VS3.close()
 
 class MyRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
@@ -122,246 +98,106 @@ class MyRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     pathways = {'/test-pages': 'https://127.0.0.1/test-pages', 
                 '/test-pages/': 'https://127.0.0.1/test-pages/',
                 '/test-pages/test1': 'https://127.0.0.1:8000/test-pages/test1',
-                'test-pages/test1/': 'https://127.0.0.1:8000/test-pages/test1/',
+                '/test-pages/test1/': 'https://127.0.0.1:8000/test-pages/test1',
                 '/test-pages/test2': 'https://127.0.0.1:8001/test-pages/test2',
-                '/test-pages/test2/': 'https://127.0.0.1:8001/test-pages/test2/',
+                '/test-pages/test2/': 'https://127.0.0.1:8001/test-pages/test2',
                 '/test-pages/test3': 'https://127.0.0.1:8002/test-pages/test3',
-                '/test-pages/test3/': 'https://127.0.0.1:8002/test-pages/test3/',
+                '/test-pages/test3/': 'https://127.0.0.1:8002/test-pages/test3',
                }
-    page_get_fail = 'http://www.404errorpages.com'
-    
+    netAdresses = {'/': 'https://127.0.0.1:8000/test-pages/test1',
+                   'www.nbc.com': 'https://127.0.0.1:8001/test-pages/test2',
+                   'nothing.net': 'https:127.0.0.1:8002/test-pages/test3',
+                  }
+    page_get_fail = 'http://www.thisaddressdoesnotexist.com'
+     
     def do_HEAD(self):
         self.send_response(301)
+        print 'Current path in My request: ', self.netloc 
         self.send_header('Location', self.pathways.get(self.path, self.page_get_fail))
         self.end_headers()
 
     def do_GET(self):
         self.do_HEAD()
 
+def VirtualHandler(serverType=None, webURL=None):
+        
 
-class VS1Handler(BaseHTTPServer.BaseHTTPRequestHandler):
+    class VSHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
-    server_version = 'IIS'
-    sys_version = ''
+        server_version = serverType
+        sys_version = ''
 
-    def do_head(self):
-        self.send_response(200)
-        self.send_header('Content-type', 'text/html')
-        self.end_headers()
+        def do_head(self):
+            self.send_response(200)
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
 
-    def send_head(self):
-        print 'In Head'
-        path = self.translate_path(self.path)
-        f = None
-        if os.path.isdir(path):
-            if not self.path.endswith('/'):
-                self.send_response(301)
-                self.send_header('Location', self.path + '/')
-                self.end_headers()
-                return None
-            for index in 'index.html', 'index.htm':
-                index = os.path.join(path, index)
-                if os.path.exists(index):
-                    path = index
-                    print 'Path before break is ', path
-                    break
+        def send_head(self):
+            path = self.translate_path(self.path)
+            f = None
+            if os.path.isdir(path):
+                if not self.path.endswith('/'):
+                    self.send_response(301)
+                    self.send_header('Location', self.path + '/')
+                    self.end_headers()
+                    return None
+                for index in 'index.html', 'index.htm':
+                    index = os.path.join(path, index)
+                    if os.path.exists(index):
+                        path = index
+                        break
         #take the path of  the index found from the executed file and use it as a root
         #need to upgrade to use absolute paths
-        try:
-            path = path[:-13]
-            path = path + self.path + './index.html'
-            print 'Current Path: ', path
-            f = open(path, 'rb')
-        except IOError:
-            self.send_error(404, 'File not found')
-            return None
-        self.send_response(200)
-        self.send_header('Content-type', 'text/html')
-        fs = os.fstat(f.fileno())
-        self.send_header('Content-Length', str(fs[6])) #supposedly obsolete. Leave in?
-        self.send_header('Last-Modified', self.date_time_string(fs.st_mtime))
-        self.end_headers()
-        return f
-
-    def translate_path(self, path):
-        path = path.split('/',1)[0]
-        path = path.split('#',1)[0]
-        path = posixpath.normpath(urllib.unquote(path))
-        words = path.split('/')
-        words = filter(None,words)
-        path = os.getcwd()
-        for word in words:
-            drive, word = os.path.splitdrive(word)
-            head, word = os.path.split(word)
-            if word  in (os.curdir, os.pardir):
-                path = os.path.join(path, word)
-        return path
-        
-    def copyfile(self, source, outputfile):
-        shutil.copyfileobj(source, outputfile)
-
-    def response(self):
-         f = self.send_head()
-         if f:
-             self.copyfile(f, self.wfile)
-             f.close()
-
-    def do_GET(self):
-        if self.path == '/test-pages/test1':
-            self.response()
-        elif self.path == '/test-pages/test1/':
-            self.response()
-
-        else:
-            self.send_error(404, 'File not found: %s'% self.path)
-
-
-class VS2Handler(BaseHTTPServer.BaseHTTPRequestHandler):
-
-    server_version = 'gws'
-    sys_version = ''
-
-    def do_head(self):
-        self.send_response(200)
-        self.send_header('Content-type', 'text/html')
-        self.end_headers()
-
-    def send_head(self):
-        path = self.translate_path(self.path)
-        f = None
-        if os.path.isdir(path):
-            if not self.path.endswith('/'):
-                self.send_response(301)
-                self.send_header('Location', self.path + '/')
-                self.end_headers()
+            try:                                                #Use open with 
+                pathLinks = path.split('.')
+                path = pathLinks[0]
+                path = path[:-1] + self.path + '.' + pathLinks[1] + '.' + pathLinks[2]    
+                f = open(path, 'rb')                            #F object needs to pass contents not open file
+            except IOError:
+                self.send_error(404, 'File not found')
                 return None
-            for index in 'index.html', 'index.htm':
-                index = os.path.join(path, index)
-                if os.path.exists(index):
-                    path = index
-                    break
-        #take the path of  the index found from the executed file and use it as a root
-        #need to upgrade to use absolute paths
-        try:
-            path = path[:-13]
-            path = path + self.path + './index.html'
-            f = open(path, 'rb')
-        except IOError:
-            self.send_error(404, 'File not found')
-            return None
-        self.send_response(200)
-        self.send_header('Content-type', 'text/html')#ctype)
-        fs = os.fstat(f.fileno())
-        self.send_header('Content-Length', str(fs[6])) #supposedly obsolete. Leave in?
-        self.send_header('Last-Modified', self.date_time_string(fs.st_mtime))
-        self.end_headers()
-        return f
+            self.send_response(200)
+            self.send_header('Content-type', 'text/html')
+            fs = os.fstat(f.fileno())
+            self.send_header('Content-Length', str(fs.st_size))      #Used for TCP connections
+            self.send_header('Last-Modified', self.date_time_string(fs.st_mtime))
+            self.end_headers()
+            return f
 
-    def translate_path(self, path):
-        path = path.split('/',1)[0]
-        path = path.split('#',1)[0]
-        path = posixpath.normpath(urllib.unquote(path))
-        words = path.split('/')
-        words = filter(None,words)
-        path = os.getcwd()
-        for word in words:
-            drive, word = os.path.splitdrive(word)
-            head, word = os.path.split(word)
-            if word  in (os.curdir, os.pardir):
-                path = os.path.join(path, word)
-        return path
-        
-    def copyfile(self, source, outputfile):
-        shutil.copyfileobj(source, outputfile)
+        def translate_path(self, path):                         #Non-inherited objects should be private
+            path = path.split('/',1)[0]
+            path = path.split('#',1)[0]
+            path = posixpath.normpath(urllib.unquote(path))
+            words = path.split('/')
+            words = filter(None,words)
+            path = os.getcwd()
+            for word in words:
+                drive, word = os.path.splitdrive(word)
+                head, word = os.path.split(word)
+                if word  in (os.curdir, os.pardir):
+                    path = os.path.join(path, word)
+            return path
 
-    def response(self):
-         f = self.send_head()
-         if f:
-             self.copyfile(f, self.wfile)
-             f.close()
+        #consider moving to util.py
+        def copyfile(self, source, outputfile):
+            shutil.copyfileobj(source, outputfile)
 
-    def do_GET(self):
-        if self.path == '/test-pages/test2':
-            self.response()
-        elif self.path == '/test-pages/test2/':
-            self.response()
+        def response(self):
+             f = self.send_head()
+             if f:
+                 self.copyfile(f, self.wfile)
+                 f.close()
 
-        else:
-            self.send_error(404, 'File not found: %s'% self.path)
- 
+        def do_GET(self):
+            print 'Current web URL: ', webURL
+            if self.path == webURL:
+                self.response()
+            elif self.path == webURL + '/':
+                self.response()
+            else:
+                self.send_error(404, 'File not found: %s'% self.path)
 
-class VS3Handler(BaseHTTPServer.BaseHTTPRequestHandler):
-
-    serverType = 'cherokee'
-    sys_version = ''
-
-    def do_head(self):
-        self.send_response(200)
-        self.send_header('Contant-type', 'text/html')
-        self.end_headers()
-
-    def send_head(self):
-        path = self.translate_path(self.path)
-        f = None
-        if os.path.isdir(path):
-            if not self.path.endswith('/'):
-                self.send_response(301)
-                self.send_header('Location', self.path + '/')
-                self.end_headers()
-                return None
-            for index in 'index.html', 'index.htm':
-                index = os.path.join(path, index)
-                if os.path.exists(index):
-                    path = index
-                    break
-        #take the path of  the index found from the executed file and use it as a root
-        #need to upgrade to use absolute paths
-        try:
-            path = path[:-13]
-            path = path + self.path + './index.html'
-            f = open(path, 'rb')
-        except IOError:
-            self.send_error(404, 'File not found')
-            return None
-        self.send_response(200)
-        self.send_header('Content-type', 'text/html')
-        fs = os.fstat(f.fileno())
-        self.send_header('Content-Length', str(fs[6])) #supposedly obsolete. Leave in?
-        self.send_header('Last-Modified', self.date_time_string(fs.st_mtime))
-        self.end_headers()
-        return f
-
-    def translate_path(self, path):
-        path = path.split('/',1)[0]
-        path = path.split('#',1)[0]
-        path = posixpath.normpath(urllib.unquote(path))
-        words = path.split('/')
-        words = filter(None,words)
-        path = os.getcwd()
-        for word in words:
-            drive, word = os.path.splitdrive(word)
-            head, word = os.path.split(word)
-            if word  in (os.curdir, os.pardir):
-                path = os.path.join(path, word)
-        return path
-        
-    def copyfile(self, source, outputfile):
-        shutil.copyfileobj(source, outputfile)
-
-    def response(self):
-         f = self.send_head()
-         if f:
-             self.copyfile(f, self.wfile)
-             f.close()
-
-    def do_GET(self):
-        if self.path == '/test-pages/test3':
-            self.response()
-        elif self.path == '/test-pages/test3/':
-            self.response()
-
-        else:
-            self.send_error(404, 'File not found: %s'% self.path)
+    return VSHandler
 
 
 class RunTimeItems(object):
@@ -456,6 +292,16 @@ class IOitems(object):
                     serverConfig['HTTPport'] = readfile.get('Run_Time', 'HTTPport') 
                 if readfile.has_option('Run_Time', 'HTTPSport'):
                     serverConfig['HTTPSport'] = readfile.get('Run_Time', 'HTTPSport')
+                if readfile.has_option('Run_Time', 'VS_Ports'):
+                    serverConfig['VS_Ports'] = readfile.get('Run_Time', 'VS_Ports')
+                if readfile.has_option('Run_Time', 'Certs'):
+                    serverConfig['Certs'] = readfile.get('Run_Time', 'Certs')
+                if readfile.has_option('Run_Time', 'Keys'):
+                    serverConfig['Keys'] = readfile.get('Run_Time', 'Keys')
+                if readfile.has_option('Run_Time', 'Handlers'):
+                    serverConfig['Handlers'] = readfile.get('Run_Time', 'Handlers') 
+                if readfile.has_option('Run_Time', 'Name'):
+                    serverConfig['Name'] = readfile.get('Run_Time', 'Name')
             if not readfile.has_section('Domain'):
                 print 'File missing Domain section'
             elif readfile.has_section('Domain'):
@@ -475,7 +321,7 @@ class IOitems(object):
             print 'File not found, specify a valid file'
             sys.exit(1)
 
-    def writeToConfig(self, currentFile=None, DNSport=None, whiteFile=None, blackFile=None, http_port=None, https_port=None, domain=None):
+    def writeToConfig(self, currentFile=None, DNSport=None, whiteFile=None, blackFile=None, http_port=None, https_port=None, vs_ports=None, certs=None, keys=None, handlers=None, name=None, domain=None):
         try:
            config_file = ConfigParser.ConfigParser()
            config_file.read(currentFile)
@@ -492,6 +338,17 @@ class IOitems(object):
                    config_file.set('Run_Time', 'HTTPport', http_port)
                if https_port is not None:
                    config_file.set('Run_Time', 'HTTPSport', https_port)
+               #Virtual server configs 
+               if https_port is not None:
+                   config_file.set('Run_Time', 'VS_Ports', vs_ports)
+               if https_port is not None:
+                   config_file.set('Run_Time', 'Certs', certs)
+               if https_port is not None:
+                   config_file.set('Run_Time', 'Keys', keys)
+               if https_port is not None:
+                   config_file.set('Run_Time', 'Handlers', handlers)
+               if https_port is not None:
+                   config_file.set('Run_Time', 'Name', name)
            elif not config_file.has_section('Run_Time'):
                #create config section
                print 'Adding section and items'
@@ -588,19 +445,25 @@ class IOitems(object):
         https_server = Https_start(self.https_port)
         https_server.daemon = True
         https_server.start()
+        
+        #Move these items to the config file
+        handlers = ['VH1', 'VH2', 'VH3']
+        certs = ['/Users/ricardocarretero/dev/vm/ubuntu1404/certs/./test1cert.pem',
+                 '/Users/ricardocarretero/dev/vm/ubuntu1404/certs/./test2cert.pem',
+                 '/Users/ricardocarretero/dev/vm/ubuntu1404/certs/./test3cert.pem']
 
-        #Initialize Virtual Services
-        VS1_server = VS1_start()
-        VS1_server.daemon = True
-        VS1_server.start()
+        keys = [ '/Users/ricardocarretero/dev/vm/ubuntu1404/certs/./test1key.pem',
+                 '/Users/ricardocarretero/dev/vm/ubuntu1404/certs/./test2key.pem',
+                 '/Users/ricardocarretero/dev/vm/ubuntu1404/certs/./test3key.pem']
+        ports = [ 8000, 8001, 8002]
+        VS_servers = [ 'VS1', 'VS2', 'VS3']
+        serverNames = ['nginx', 'IIS', 'Apache']
+        URLs = ['/test-pages/test1', '/test-pages/test2', '/test-pages/test3']
+        for number in range(3):                                                    
+          VS_servers[number] = VS_host(ports[number], certs[number], keys[number], VirtualHandler(serverNames[number], URLs[number]), name= str(number))
+          VS_servers[number].daemon = True
+          VS_servers[number].start()
 
-        VS2_server = VS2_start()
-        VS2_server.daemon = True
-        VS2_server.start()
-
-        VS3_server = VS3_start()
-        VS3_server.daemon = True
-        VS3_server.start()
         try:
             while 1:
                 time.sleep(1)
