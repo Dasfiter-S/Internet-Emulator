@@ -20,8 +20,8 @@ class Controller(Model.IOitems):
         print 'Searching: '
         print request
         reply = DNSRecord(DNSHeader(id=request.header.id, qr=1, aa=1, ra=1), q=request.q)
-        queryName = request.q.qname
-        strQuery = repr(queryName)                            #remove class formatting
+        qn = request.q.qname
+        strQuery = repr(qn)                            #remove class formatting
         strQuery = strQuery[12:-2]                     #DNSLabel type, strip class and take out string  
 
         whitelist = self.whitelist
