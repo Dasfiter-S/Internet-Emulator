@@ -2,10 +2,10 @@ import traceback
 import shutil
 from Model import *
 
-
+#View is now in charge of displaying the index file.
+#It recieves the file object and then passes it onto
+#the view then file is closed after it is copied.
 class View(object):
-#    def__init__(self, currentFile='log.txt'):
-#        self.currentFile = currentFile
 
     def terminalOut(self, message):
         print message 
