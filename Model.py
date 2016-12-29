@@ -73,7 +73,7 @@ class Https_start(threading.Thread):
             https.close()
 
 class VS_host(threading.Thread):
-    def __init__(self, port=8000, cert='/Users/ricardocarretero/dev/vm/ubuntu1404/certs/./test1cert.pem', key='/Users/ricardocarretero/dev/vm/ubuntu1404/certs/./test1key.pem', handler= None, name= ''):
+    def __init__(self, port=8000, cert=None, key=None, handler= None, name= ''):
         threading.Thread.__init__(self)
         self.port = port
         self.cert = cert
@@ -83,10 +83,15 @@ class VS_host(threading.Thread):
 
     def run(self):
         try:
-            print 'HTTPS '+ self.name  + ' on port: ', self.port
-            VS = BaseHTTPServer.HTTPServer(('', int(self.port)), self.handler)
-            VS.socket = ssl.wrap_socket(VS.socket, certfile= self.cert, server_side=True, keyfile= self.key)
-            VS.serve_forever()
+            if self.cert is not None:
+                print 'HTTPS '+ self.name  + ' on port: ', self.port
+                VS = BaseHTTPServer.HTTPServer(('', int(self.port)), self.handler)
+                VS.socket = ssl.wrap_socket(VS.socket, certfile= self.cert, server_side=True, keyfile= self.key)
+                VS.serve_forever()
+            else:
+                print 'HTTP '+ self.name  + ' on port: ', self.port
+                VS = BaseHTTPServer.HTTPServer(('', int(self.port)), MyRequestHandler)
+                VS.serve_forever()
         except KeyboardInterrupt:
             VS.close()
 
@@ -104,23 +109,66 @@ class MyRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 '/test-pages/test3': 'https://127.0.0.1:8002/test-pages/test3',
                 '/test-pages/test3/': 'https://127.0.0.1:8002/test-pages/test3',
                }
-    netAdresses = {'/': 'https://127.0.0.1:8000/test-pages/test1',
-                   'www.nbc.com': 'https://127.0.0.1:8001/test-pages/test2',
-                   'nothing.net': 'https:127.0.0.1:8002/test-pages/test3',
+
+    netAddresses = {'/': 'http://www.cnn.com:8000',
+                    'www.cnn.com' : 'http://www.cnn.com:8000', 
+                   #'http://www.cnn.com/': 'https://127.0.0.1:8001/test-pages/test2',
+                   #'nothing.net': 'https:127.0.0.1:8002/test-pages/test3',
                   }
+
     page_get_fail = 'http://www.thisaddressdoesnotexist.com'
-     
+
     def do_HEAD(self):
+        host = self.headers.get('Host')
         self.send_response(301)
-        print 'Current path in My request: ', self.netloc 
-        self.send_header('Location', self.pathways.get(self.path, self.page_get_fail))
+        print 'Current path in My request: ', self.path
+        print 'Current Host in My request: ', host
+        self.send_header('Location', self.netAddresses.get(host, self.page_get_fail))
         self.end_headers()
 
     def do_GET(self):
-        self.do_HEAD()
+#        self.do_HEAD()           #used for forwarding to SSL Virtual servers
+        self.response() 
+    #host_head is used for http virtual hosting. If a blacklisted request is redirected to 127.0.0.1 then it is
+    #resolved here and displayed while staying on port 80. Example cnn.com or foo.com
+    def host_head(self):
+        host = self.headers.get('Host')
+        hostLinks = host.split('.')
+        hostPath = hostLinks[0] + '/' + hostLinks[1] + '/' + hostLinks[2]
+        f = None
+        if os.path.isdir(hostPath):
+            for index in 'index.html', 'index.htm':
+                index = os.path.join(hostPath, index)
+                if os.path.exists(index):
+                    path = index
+                    break
+        try: #Use open with 
+            basePath = path[:-10]
+            index = path[24:]
+            path  = basePath + './' + index
+            print '2 Path: ', path
+            f = open(path, 'rb')                            #F object needs to pass contents not, open file
+        except IOError:
+            self.send_error(404, 'File not found')
+            return None
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html')
+        fs = os.fstat(f.fileno())
+        self.send_header('Content-Length', str(fs.st_size))      #Used for TCP connections
+        self.send_header('Last-Modified', self.date_time_string(fs.st_mtime))
+        self.end_headers()
+        return f
+
+    def response(self):
+        f = self.host_head()
+        if f:
+            self.copyfile(f, self.wfile)
+            f.close()
+
+    def copyfile(self, source, outputfile):
+        shutil.copyfileobj(source, outputfile)
 
 def VirtualHandler(serverType=None, webURL=None):
-        
 
     class VSHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
@@ -146,13 +194,45 @@ def VirtualHandler(serverType=None, webURL=None):
                     if os.path.exists(index):
                         path = index
                         break
-        #take the path of  the index found from the executed file and use it as a root
-        #need to upgrade to use absolute paths
+        #take the path of  the index found from the executed file and use it as the root directory
+        #need to use relative paths for code portability
             try:                                                #Use open with 
                 pathLinks = path.split('.')
                 path = pathLinks[0]
                 path = path[:-1] + self.path + '.' + pathLinks[1] + '.' + pathLinks[2]    
-                f = open(path, 'rb')                            #F object needs to pass contents not open file
+                f = open(path, 'rb')                            #F object needs to pass contents not, open file
+            except IOError:
+                self.send_error(404, 'File not found')
+                return None
+            self.send_response(200)
+            self.send_header('Content-type', 'text/html')
+            fs = os.fstat(f.fileno())
+            self.send_header('Content-Length', str(fs.st_size))      #Used for TCP connections
+            self.send_header('Last-Modified', self.date_time_string(fs.st_mtime))
+            self.end_headers()
+            return f
+
+        def host_head(self):
+            host = self.headers.get('Host')
+            hostLinks = host.split('.')
+            hostPath = hostLinks[0] + '/' + hostLinks[1] + '/' + hostLinks[2]
+            f = None
+            if os.path.isdir(hostPath):
+                if not hostPath.endswith('/'):
+                    self.send_response(301)
+                    self.send_header('Location', hostPath + '/')
+                    self.end_headers()
+                    return None
+                for index in 'index.html', 'index.htm':
+                    index = os.path.join(hostPath, index)
+                    if os.path.exists(index):
+                        path = index
+                        break
+            try:                                                #Use open with 
+                pathLinks = path.split('.')
+                path = pathLinks[0]
+                path = path[:-1] + hostPath + '.' + pathLinks[1] + '.' + pathLinks[2]    
+                f = open(path, 'rb')                            #F object needs to pass contents not, open file
             except IOError:
                 self.send_error(404, 'File not found')
                 return None
@@ -190,6 +270,7 @@ def VirtualHandler(serverType=None, webURL=None):
 
         def do_GET(self):
             print 'Current web URL: ', webURL
+            host = self.headers.get('Host')
             if self.path == webURL:
                 self.response()
             elif self.path == webURL + '/':
@@ -447,22 +528,25 @@ class IOitems(object):
         https_server.start()
         
         #Move these items to the config file
-        handlers = ['VH1', 'VH2', 'VH3']
-        certs = ['/Users/ricardocarretero/dev/vm/ubuntu1404/certs/./test1cert.pem',
+        certs = [#'server.key',
+                 '/Users/ricardocarretero/dev/vm/ubuntu1404/certs/./test1cert.pem',
                  '/Users/ricardocarretero/dev/vm/ubuntu1404/certs/./test2cert.pem',
                  '/Users/ricardocarretero/dev/vm/ubuntu1404/certs/./test3cert.pem']
 
-        keys = [ '/Users/ricardocarretero/dev/vm/ubuntu1404/certs/./test1key.pem',
+        keys = [# './server.crt',
+                 '/Users/ricardocarretero/dev/vm/ubuntu1404/certs/./test1key.pem',
                  '/Users/ricardocarretero/dev/vm/ubuntu1404/certs/./test2key.pem',
                  '/Users/ricardocarretero/dev/vm/ubuntu1404/certs/./test3key.pem']
-        ports = [ 8000, 8001, 8002]
-        VS_servers = [ 'VS1', 'VS2', 'VS3']
-        serverNames = ['nginx', 'IIS', 'Apache']
+        ports = [#443, 
+                 8000, 8001, 8002]
+        VS_servers = []
+        serverNames = ['nginx', 'IIS', 'Apache', 'gws', 'lighttpd']
         URLs = ['/test-pages/test1', '/test-pages/test2', '/test-pages/test3']
-        for number in range(3):                                                    
-          VS_servers[number] = VS_host(ports[number], certs[number], keys[number], VirtualHandler(serverNames[number], URLs[number]), name= str(number))
-          VS_servers[number].daemon = True
-          VS_servers[number].start()
+        for number in range(len(keys)):
+            VS_servers.append('VS' + str(number))
+            VS_servers[number] = VS_host(ports[number], certs[number], keys[number], VirtualHandler(serverNames[number], URLs[number]), name= VS_servers[number])
+            VS_servers[number].daemon = True
+            VS_servers[number].start()
 
         try:
             while 1:
@@ -494,7 +578,7 @@ class IOitems(object):
          self.set_save(arg.save_option)
          if arg.save_option == True: #this function prevents the program from saving garbage values if only -s is selected without params
              nullChoices = 0         #if it is run without paramaters to save, don't save
-             argSize = len(vars(arg)) - 1
+             argSize = len(vars(arg)) - 1 #There is a -1 because -s is a save flag
              for value in vars(arg):
                  if getattr(arg, value) == None:
                      nullChoices = nullChoices + 1
