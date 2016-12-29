@@ -3,6 +3,7 @@ import threading
 import Queue
 import sys
 import Controller
+import View
 import os
 import argparse
 import ConfigParser
@@ -13,6 +14,7 @@ import posixpath
 import shutil
 import cgi
 import ssl
+import StringIO
 from dnslib import *
 from multiprocessing.dummy import Pool as ThreadPool
 
@@ -121,20 +123,25 @@ class MyRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     def do_HEAD(self):
         host = self.headers.get('Host')
         self.send_response(301)
-        print 'Current path in My request: ', self.path
-        print 'Current Host in My request: ', host
         self.send_header('Location', self.netAddresses.get(host, self.page_get_fail))
         self.end_headers()
 
     def do_GET(self):
 #        self.do_HEAD()           #used for forwarding to SSL Virtual servers
-        self.response() 
+        self.host_head() 
+
+
     #host_head is used for http virtual hosting. If a blacklisted request is redirected to 127.0.0.1 then it is
     #resolved here and displayed while staying on port 80. Example cnn.com or foo.com
     def host_head(self):
         host = self.headers.get('Host')
-        hostLinks = host.split('.')
-        hostPath = hostLinks[0] + '/' + hostLinks[1] + '/' + hostLinks[2]
+        if 'www' in host:
+            hostLinks = host.split('.')
+            hostPath = hostLinks[0] + '/' + hostLinks[1] + '/' + hostLinks[2]
+        else:
+            host = 'www.' + host
+            hostLinks = host.split('.')
+            hostPath = hostLinks[0] + '/' + hostLinks[1] + '/' + hostLinks[2]
         f = None
         if os.path.isdir(hostPath):
             for index in 'index.html', 'index.htm':
@@ -144,9 +151,8 @@ class MyRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                     break
         try: #Use open with 
             basePath = path[:-10]
-            index = path[24:]
+            index = path[-10:]
             path  = basePath + './' + index
-            print '2 Path: ', path
             f = open(path, 'rb')                            #F object needs to pass contents not, open file
         except IOError:
             self.send_error(404, 'File not found')
@@ -157,16 +163,10 @@ class MyRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         self.send_header('Content-Length', str(fs.st_size))      #Used for TCP connections
         self.send_header('Last-Modified', self.date_time_string(fs.st_mtime))
         self.end_headers()
-        return f
+        show = View.View()
+        show.response(f, self.wfile)
+        f.close()
 
-    def response(self):
-        f = self.host_head()
-        if f:
-            self.copyfile(f, self.wfile)
-            f.close()
-
-    def copyfile(self, source, outputfile):
-        shutil.copyfileobj(source, outputfile)
 
 def VirtualHandler(serverType=None, webURL=None):
 
@@ -175,13 +175,8 @@ def VirtualHandler(serverType=None, webURL=None):
         server_version = serverType
         sys_version = ''
 
-        def do_head(self):
-            self.send_response(200)
-            self.send_header('Content-type', 'text/html')
-            self.end_headers()
-
         def send_head(self):
-            path = self.translate_path(self.path)
+            path = self.__translate_path(self.path)
             f = None
             if os.path.isdir(path):
                 if not self.path.endswith('/'):
@@ -210,7 +205,9 @@ def VirtualHandler(serverType=None, webURL=None):
             self.send_header('Content-Length', str(fs.st_size))      #Used for TCP connections
             self.send_header('Last-Modified', self.date_time_string(fs.st_mtime))
             self.end_headers()
-            return f
+            show = View.View()
+            show.response(f, self.wfile)
+            f.close()
 
         def host_head(self):
             host = self.headers.get('Host')
@@ -242,9 +239,11 @@ def VirtualHandler(serverType=None, webURL=None):
             self.send_header('Content-Length', str(fs.st_size))      #Used for TCP connections
             self.send_header('Last-Modified', self.date_time_string(fs.st_mtime))
             self.end_headers()
-            return f
+            show = View.View()
+            show.response(f, self.wfile)
+            f.close()
 
-        def translate_path(self, path):                         #Non-inherited objects should be private
+        def __translate_path(self, path):                         #Non-inherited objects should be private
             path = path.split('/',1)[0]
             path = path.split('#',1)[0]
             path = posixpath.normpath(urllib.unquote(path))
@@ -258,23 +257,14 @@ def VirtualHandler(serverType=None, webURL=None):
                     path = os.path.join(path, word)
             return path
 
-        #consider moving to util.py
-        def copyfile(self, source, outputfile):
-            shutil.copyfileobj(source, outputfile)
-
-        def response(self):
-             f = self.send_head()
-             if f:
-                 self.copyfile(f, self.wfile)
-                 f.close()
 
         def do_GET(self):
             print 'Current web URL: ', webURL
             host = self.headers.get('Host')
             if self.path == webURL:
-                self.response()
+                self.send_head()
             elif self.path == webURL + '/':
-                self.response()
+                self.send_head()
             else:
                 self.send_error(404, 'File not found: %s'% self.path)
 
