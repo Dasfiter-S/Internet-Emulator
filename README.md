@@ -1,6 +1,6 @@
 #Internet Emulator V1.1
 -----------------------------------------
-Refactoring code to fit the Model-View-Controller philosophy. Cleaning up code by cutting redundant methods. Renaming variables for clarity and adding comments for easier code parsing. If this project is running on a Vagrant machine make sure that the Vagranfile is is forwarding the following:
+Refactoring code to fit the Model-View-Controller philosophy. Cleaning up code by cutting redundant methods. Renaming variables for clarity and adding comments for easier code parsing. If this project is running on a Vagrant machine make sure that the Vagranfile is is forwarding the following
          config.vm.network "forwarded_port", guest: 80, host: 8080
          config.vm.network "forwarded_port", guest: 443, host: 8443
          config.vm.network "forwarded_port", guest: 53, host: 8053
