@@ -1,14 +1,14 @@
 #Internet Emulator V1.1
 -----------------------------------------
 Refactoring code to fit the Model-View-Controller philosophy. Cleaning up code by cutting redundant methods. Renaming variables for clarity and adding comments for easier code parsing. If this project is running on a Vagrant machine make sure that the Vagranfile is is forwarding the following:
-    config.vm.network "forwarded_port", guest: 80, host: 8080
-    config.vm.network "forwarded_port", guest: 443, host: 8443
-    config.vm.network "forwarded_port", guest: 53, host: 8053
+         config.vm.network "forwarded_port", guest: 80, host: 8080
+         config.vm.network "forwarded_port", guest: 443, host: 8443
+         config.vm.network "forwarded_port", guest: 53, host: 8053
     
 if you are on a mac you can redirect your localhost quieries to the correct ports using 
-    sudo ipfw add 100 fwd 127.0.0.1,8080 tcp from any to me 80
-    sudo ipfw add 101 fwd 127.0.0.1,8443 tcp from any to me 443
-    sudo ipfw add 102 fwd 127.0.0.1,8053 tcp from any to me 53
+         sudo ipfw add 100 fwd 127.0.0.1,8080 tcp from any to me 80
+         sudo ipfw add 101 fwd 127.0.0.1,8443 tcp from any to me 443
+         sudo ipfw add 102 fwd 127.0.0.1,8053 tcp from any to me 53
 
 this is important because the Vagrant machine does not have access to ports below port 1024 since it is running headless. Even if you run it as root you will not be able to gain access to those ports. 
 
