@@ -47,7 +47,16 @@ class DomainItem():
         #item = IOitems()
         #item.addToCache(self, controller.get_blacklist)
 
-class Http_start(threading.Thread):
+
+class Server(threading.Thread):
+
+    def factory(self, type, port=None):
+        if type == 'HTTP': return Http_start(port)
+        elif type == 'HTTPS': return Https_start(port)
+#        elif type == 'VShost': return VS_host(port)
+        else: 'No such type ' + type
+
+class Http_start(Server):
     def __init__(self, port=None):
         threading.Thread.__init__(self)
         self.port = port
@@ -60,7 +69,7 @@ class Http_start(threading.Thread):
         except KeyboardInterrupt:
             http.server_close()
 
-class Https_start(threading.Thread):
+class Https_start(Server):
     def __init__(self, port=None):
         threading.Thread.__init__(self)
         self.port = port
@@ -74,7 +83,7 @@ class Https_start(threading.Thread):
         except KeyboardInterrupt:
             https.close()
 
-class VS_host(threading.Thread):
+class VS_host(Server):
     def __init__(self, port=8000, cert=None, key=None, handler= None, name= ''):
         threading.Thread.__init__(self)
         self.port = port
@@ -153,8 +162,8 @@ class MyRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             basePath = path[:-10]
             index = path[-10:]
             path  = basePath + './' + index
-            f = open(path, 'rb')                            #F object needs to pass contents not, open file
-        except IOError:
+            f = open(path, 'rb')                            #f object needs to pass contents not, open file
+        except IOError:                                     #fixed by close the file after it  has been copied to View
             self.send_error(404, 'File not found')
             return None
         self.send_response(200)
@@ -508,12 +517,13 @@ class IOitems(object):
 
         #Initialize and run HTTP services
         self.setLists()
-        http_server = Http_start(self.http_port)
+        serverList = Server()
+        http_server = serverList.factory('HTTP', self.http_port)
         http_server.daemon = True
         http_server.start()
 
         #initialize and run HTTPS services
-        https_server = Https_start(self.https_port)
+        https_server = serverList.factory('HTTPS', self.https_port)
         https_server.daemon = True
         https_server.start()
         
