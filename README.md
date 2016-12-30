@@ -12,7 +12,7 @@ if you are on a mac you can redirect your localhost quieries to the correct port
          sudo ipfw add 101 fwd 127.0.0.1,8443 tcp from any to me 443
          sudo ipfw add 102 fwd 127.0.0.1,8053 tcp from any to me 53
 
-this is important because the Vagrant machine does not have access to ports below port 1024 since it is running headless. Even if you run it as root you will not be able to gain access to those ports. 
+this is important because the Vagrant machine does not have access to ports below port 1024 since it is running headless. Even if you run it as root you will not be able to gain access to those ports. These settings will remain until your machine (not the vagrant one, the host machine) is rebooted.
 
 # Internet Emulator V1
 -----------------------------------------
