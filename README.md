@@ -1,3 +1,7 @@
+#Internet Emulator V1.1
+-----------------------------------------
+Refactoring code to fit the Model-View-Controller philosophy. Cleaning up code by cutting redundant methods. Renaming variables for clarity and adding comments for easier code parsing.
+
 # Internet Emulator V1
 -----------------------------------------
 Supports HTTP Virtual hosting
