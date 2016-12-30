@@ -1,3 +1,7 @@
+#Internet Emulator V1.1.2
+-----------------------------------------
+Added factory pattern for server types. Still needs some expanding to support the rest of the servers. Cleaned up some of the commented out lines that were no longer needed for debugging.
+
 #Internet Emulator V1.1
 -----------------------------------------
 Refactoring code to fit the Model-View-Controller philosophy. Cleaning up code by cutting redundant methods. Renaming variables for clarity and adding comments for easier code parsing. If this project is running on a Vagrant machine make sure that the Vagranfile is is forwarding the following
