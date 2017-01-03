@@ -1,3 +1,7 @@
+#Internet Emulator V1.1.3
+-----------------------------------------
+Fixed a bug that would error out the server when entering the localhost in the browser while the server was running. Also fixed a potential issue where the index file object was being passed off to another function. Now the file is closed after being copied by the view function. Refactored some of the code to streamline the host_head function.
+
 #Internet Emulator V1.1.2
 -----------------------------------------
 Added factory pattern for server types. Still needs some expanding to support the rest of the servers. Cleaned up some of the commented out lines that were no longer needed for debugging.
