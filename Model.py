@@ -15,8 +15,10 @@ import shutil
 import cgi
 import ssl
 import StringIO
+import Util
 from dnslib import *
 from multiprocessing.dummy import Pool as ThreadPool
+
 
 
 class DomainItem():
@@ -123,58 +125,62 @@ class MyRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
     netAddresses = {'/': 'http://www.cnn.com:8000',
                     'www.cnn.com' : 'http://www.cnn.com:8000', 
-                   #'http://www.cnn.com/': 'https://127.0.0.1:8001/test-pages/test2',
-                   #'nothing.net': 'https:127.0.0.1:8002/test-pages/test3',
                   }
 
     page_get_fail = 'http://www.thisaddressdoesnotexist.com'
-
-    def do_HEAD(self):
+    
+    #Used only for redirects, otherwise not called
+    def _do_HEAD(self):
         host = self.headers.get('Host')
         self.send_response(301)
         self.send_header('Location', self.netAddresses.get(host, self.page_get_fail))
         self.end_headers()
 
     def do_GET(self):
-#        self.do_HEAD()           #used for forwarding to SSL Virtual servers
-        self.host_head() 
+#        self._do_HEAD()           #used for forwarding to SSL Virtual servers, next step is to get HTTPS working
+        self._host_head() 
 
 
     #host_head is used for http virtual hosting. If a blacklisted request is redirected to 127.0.0.1 then it is
     #resolved here and displayed while staying on port 80. Example cnn.com or foo.com
-    def host_head(self):
+    def _host_head(self):
         host = self.headers.get('Host')
-        if 'www' in host:
-            hostLinks = host.split('.')
-            hostPath = hostLinks[0] + '/' + hostLinks[1] + '/' + hostLinks[2]
+        tool = Util.Util()
+        if not tool.valid_addr(host): #filter out IP address that cannot be parsed as localhost file paths
+            if 'www' in host:
+                hostLinks = host.split('.')
+                hostPath = hostLinks[0] + '/' + hostLinks[1] + '/' + hostLinks[2]
+            else:
+                host = 'www.' + host
+                hostLinks = host.split('.')
+                hostPath = hostLinks[0] + '/' + hostLinks[1] + '/' + hostLinks[2]
+            f = None
+            if os.path.isdir(hostPath):
+                for index in 'index.html', 'index.htm':
+                    index = os.path.join(hostPath, index)
+                    if os.path.exists(index):
+                        path = index
+                        break
+            try: #Use open with 
+                basePath = path[:-10]
+                index = path[-10:]
+                path  = basePath + './' + index
+                with open(path, 'rb') as f:
+                     self.send_response(200)
+                     self.send_header('Content-type', 'text/html')
+                     fs = os.fstat(f.fileno())
+                     self.send_header('Content-Length', str(fs.st_size))      #Used for TCP connections
+                     self.send_header('Last-Modified', self.date_time_string(fs.st_mtime))
+                     self.end_headers()
+                     show = View.View()
+                     show.response(f, self.wfile)
+                     f.close()
+
+            except IOError:                                     
+                self.send_error(404, 'File not found')
+                return None
         else:
-            host = 'www.' + host
-            hostLinks = host.split('.')
-            hostPath = hostLinks[0] + '/' + hostLinks[1] + '/' + hostLinks[2]
-        f = None
-        if os.path.isdir(hostPath):
-            for index in 'index.html', 'index.htm':
-                index = os.path.join(hostPath, index)
-                if os.path.exists(index):
-                    path = index
-                    break
-        try: #Use open with 
-            basePath = path[:-10]
-            index = path[-10:]
-            path  = basePath + './' + index
-            f = open(path, 'rb')                            #f object needs to pass contents not, open file
-        except IOError:                                     #fixed by close the file after it  has been copied to View
-            self.send_error(404, 'File not found')
-            return None
-        self.send_response(200)
-        self.send_header('Content-type', 'text/html')
-        fs = os.fstat(f.fileno())
-        self.send_header('Content-Length', str(fs.st_size))      #Used for TCP connections
-        self.send_header('Last-Modified', self.date_time_string(fs.st_mtime))
-        self.end_headers()
-        show = View.View()
-        show.response(f, self.wfile)
-        f.close()
+            self.send_error(404, 'The address ' + str(host) + ' was not found')
 
 
 def VirtualHandler(serverType=None, webURL=None):
@@ -198,25 +204,29 @@ def VirtualHandler(serverType=None, webURL=None):
                     if os.path.exists(index):
                         path = index
                         break
-        #take the path of  the index found from the executed file and use it as the root directory
+        #take the path of the index found from the executed file and use it as the root directory
         #need to use relative paths for code portability
-            try:                                                #Use open with 
-                pathLinks = path.split('.')
-                path = pathLinks[0]
-                path = path[:-1] + self.path + '.' + pathLinks[1] + '.' + pathLinks[2]    
-                f = open(path, 'rb')                            #F object needs to pass contents not, open file
+            try:  
+                if not socket.inet_aton(self.path):
+                    pathLinks = path.split('.')
+                    path = pathLinks[0]
+                    path = path[:-1] + self.path + '.' + pathLinks[1] + '.' + pathLinks[2]
+                else:
+                    self.send_error(404, 'File not found', )
+                with open(path, 'rb') as f:
+                     self.send_response(200)
+                     self.send_header('Content-type', 'text/html')
+                     fs = os.fstat(f.fileno())
+                     self.send_header('Content-Length', str(fs.st_size))      #Used for TCP connections
+                     self.send_header('Last-Modified', self.date_time_string(fs.st_mtime))
+                     self.end_headers()
+                     show = View.View()
+                     show.response(f, self.wfile)
+                     f.close()                                                #Needed? With already closes file after use
+
             except IOError:
                 self.send_error(404, 'File not found')
                 return None
-            self.send_response(200)
-            self.send_header('Content-type', 'text/html')
-            fs = os.fstat(f.fileno())
-            self.send_header('Content-Length', str(fs.st_size))      #Used for TCP connections
-            self.send_header('Last-Modified', self.date_time_string(fs.st_mtime))
-            self.end_headers()
-            show = View.View()
-            show.response(f, self.wfile)
-            f.close()
 
         def host_head(self):
             host = self.headers.get('Host')
@@ -238,19 +248,29 @@ def VirtualHandler(serverType=None, webURL=None):
                 pathLinks = path.split('.')
                 path = pathLinks[0]
                 path = path[:-1] + hostPath + '.' + pathLinks[1] + '.' + pathLinks[2]    
-                f = open(path, 'rb')                            #F object needs to pass contents not, open file
-            except IOError:
+#                f = open(path, 'rb')                            #not using with open because I need to modify the file to add
+                with open(path, 'rb') as f:
+                     self.send_response(200)
+                     self.send_header('Content-type', 'text/html')
+                     fs = os.fstat(f.fileno())
+                     self.send_header('Content-Length', str(fs.st_size))      #Used for TCP connections
+                     self.send_header('Last-Modified', self.date_time_string(fs.st_mtime))
+                     self.end_headers()
+                     show = View.View()
+                     show.response(f, self.wfile)
+                     f.close()
+            except IOError:                                     #fs variables. THe file is closed after being copied.
                 self.send_error(404, 'File not found')
                 return None
-            self.send_response(200)
-            self.send_header('Content-type', 'text/html')
-            fs = os.fstat(f.fileno())
-            self.send_header('Content-Length', str(fs.st_size))      #Used for TCP connections
-            self.send_header('Last-Modified', self.date_time_string(fs.st_mtime))
-            self.end_headers()
-            show = View.View()
-            show.response(f, self.wfile)
-            f.close()
+#            self.send_response(200)
+#            self.send_header('Content-type', 'text/html')
+#            fs = os.fstat(f.fileno())
+#            self.send_header('Content-Length', str(fs.st_size))      #Used for TCP connections
+#            self.send_header('Last-Modified', self.date_time_string(fs.st_mtime))
+#            self.end_headers()
+#            show = View.View()
+#            show.response(f, self.wfile)
+#            f.close()
 
         def __translate_path(self, path):                         #Non-inherited objects should be private
             path = path.split('/',1)[0]
