@@ -314,12 +314,10 @@ def VirtualHandler(serverType=None, webURL=None):
                 if 'www' in host:
                     hostLinks = host.split('.')
                     hostPath = hostLinks[0] + '/' + hostLinks[1] + '/' + hostLinks[2]
-                    print 'Host: ', hostPath
                 else:
                     host = 'www.' + host
                     hostLinks = host.split('.')
                     hostPath = hostLinks[0] + '/' + hostLinks[1] + '/' + hostLinks[2]
-                    print 'Host: ', hostPath
                 if os.path.isdir(hostPath):
                     for index in 'index.html', 'index.htm':
                         index = os.path.join(hostPath, index)
@@ -327,11 +325,9 @@ def VirtualHandler(serverType=None, webURL=None):
                             self.path = index
                             break
                 try: 
-                    print 'Path 1: ', self.path
                     basePath = self.path[:-10]
                     index = self.path[-10:]
                     self.path  = basePath + './' + index
-                    print 'Path 2: ', self.path
                     with open(self.path, 'rb') as f:
                         self.send_response(200)
                         self.send_header('Content-type', 'text/html')
@@ -602,13 +598,10 @@ class IOitems(object):
         if inFile is not None:
              self.blackfile = inFile
 
-    def get_path(self, cert):
-        fpath = os.path.dirname(os.path.abspath(__file__))
-        return (fpath + cert)
-
     def startServers(self):
         #Port for either services will be set at launch on terminal or config file
         # run the DNS services
+        tool = Util.Util()
         myController = Controller.Controller(self)
         self.launchOptions()
         server = [SocketServer.ThreadingUDPServer(('', self.port), myController.UDPRequestHandler),]
@@ -647,7 +640,7 @@ class IOitems(object):
         URLs = ['', '/test-pages/test2', '/test-pages/test3']
         for number in range(len(keys)):
             VS_servers.append('VS' + str(number))
-            VS_servers[number] = VS_host(ports[number], self.get_path(certs[number]), self.get_path(keys[number]), VirtualHandler(serverNames[number], URLs[number]), name= VS_servers[number])
+            VS_servers[number] = VS_host(ports[number], tool.get_path(certs[number]), tool.get_path(keys[number]), VirtualHandler(serverNames[number], URLs[number]), name= VS_servers[number])
             VS_servers[number].daemon = True
             VS_servers[number].start()
 
