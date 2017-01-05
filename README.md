@@ -1,6 +1,6 @@
 #Internet Emulator V1.2
 -----------------------------------------
-Added get_path(self) to IOitems. This new function supports the ability to enter relative paths and then hunts down the absolute path of where the file was executed and combines the result for the absolute path of the specified relative link.
+Added get_path(self) to Util.py. This new function supports the ability to enter relative paths and then hunts down the absolute path of where the file was executed and combines the result for the absolute path of the specified relative link.
 
 Also now serving HTTPS redirections with their own certificates for cnn.com:8000 and foo.com:8001. Re-wrote part of the host_head() in VSHandler() to enable using the host requested to find the right index file. It is very similar to the host_head() in MyRequestHandler(). Still needs some re-writing to get rid of a couple of constants. 
 
