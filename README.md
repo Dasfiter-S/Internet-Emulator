@@ -1,6 +1,10 @@
 #Internet Emulator V1.2
 -----------------------------------------
-Added get_path(self) to IOitems. This new function supports the ability to enter relative paths and then hunts down the absolute path of where the file was executed and combines the result for the absolute path of the specified relative link. Also now serving HTTPS redirections with their own certificates for cnn.com:8000 and foo.com:8001. Re-wrote part of the host_head() in VSHandler() to enable using the host requested to find the right index file. It is very similar to the host_head() in MyRequestHandler(). Still needs some re-writing to get rid of a couple of constants. Also created a new handler for the base HTTPS server, RedirectHandler() it will take care of sending HTTPS traffic to the right place. This new handler uses a key pair list and finds the entry requested and returns the redirect or else it sends a not found error.
+Added get_path(self) to IOitems. This new function supports the ability to enter relative paths and then hunts down the absolute path of where the file was executed and combines the result for the absolute path of the specified relative link.
+
+Also now serving HTTPS redirections with their own certificates for cnn.com:8000 and foo.com:8001. Re-wrote part of the host_head() in VSHandler() to enable using the host requested to find the right index file. It is very similar to the host_head() in MyRequestHandler(). Still needs some re-writing to get rid of a couple of constants. 
+
+Created a new handler for the base HTTPS server, RedirectHandler() it will take care of sending HTTPS traffic to the right place. This new handler uses a key pair list and finds the entry requested and returns the redirect or else it sends a not found error.
 
 #Internet Emulator V1.1.3
 -----------------------------------------
