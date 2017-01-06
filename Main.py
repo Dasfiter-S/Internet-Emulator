@@ -7,6 +7,6 @@ from Model import *
 if __name__ == '__main__':
     print 'Starting DNS server! '
     mainItem = IOitems()
-    mainItem.loadConfig()
+    mainItem.launchOptions()
     mainItem.startServers()
 

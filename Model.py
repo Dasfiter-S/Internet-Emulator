@@ -171,7 +171,7 @@ class Server_Name_Indication(object):
             ]
     ssl_list = [certs, keys]
 
-#---------------------------------------------------------------------------------------------
+#END Prototype---------------------------------------------------------------------------------------------
 
 #This handler is not using the factory pattern since it is the initial gate
 #for redirection if needed.
@@ -238,10 +238,10 @@ class MyRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                         path = index
                         break
             try: 
-                print 'Path 1: ', path
-                basePath = path[:-10]
-                index = path[-10:]
-                path  = basePath + './' + index
+                pathParts = path.split('index')
+                basePath = pathParts[0]
+                index = pathParts[1] 
+                path  = basePath + './index' + index
                 with open(path, 'rb') as f:
                      self.send_response(200)
                      self.send_header('Content-type', 'text/html')
@@ -325,9 +325,10 @@ def VirtualHandler(serverType=None, webURL=None):
                             self.path = index
                             break
                 try: 
-                    basePath = self.path[:-10]
-                    index = self.path[-10:]
-                    self.path  = basePath + './' + index
+                    pathParts = self.path.split('index')
+                    basePath = pathParts[0]
+                    index = pathParts[1] 
+                    path  = basePath + './index' + index
                     with open(self.path, 'rb') as f:
                         self.send_response(200)
                         self.send_header('Content-type', 'text/html')
@@ -381,26 +382,39 @@ class RunTimeItems(object):
         self.save = saveOption
 
     def setLists(self):
+        self.whitelist = IOitems.whitelist
+        self.blacklist = IOitems.blacklist
+        self.save = IOitems.saveOp
+        print 'set Save: ', self.save
+        print 'set Blacklist: ', self.blacklist
+        print 'set Whitelist: ', self.whitelist
+        temp = IOitems()
+        items = temp.loadConfig()
         if self.save is None and (self.blacklist is not None or self.whitelist is not None):
              print 'Skipping list save for Wf and Bf'
+             if self.whitelist is not None and self.blacklist is None:
+                 self.blacklist = items['Blacklist']
+             if self.blacklist is not None and self.whitelist is None:
+                 self.whitelist = items['Whitelist']
              return
         else:
-            temp = IOitems()
-            items = temp.loadConfig()
-            self.whitelist = items['Whitelist']
-            self.blacklist = items['Blacklist']
+             print 'List save for Wf and Bf'
+             self.whitelist = items['Whitelist']
+             self.blacklist = items['Blacklist']
 
 class IOitems(object):
-    def __init__(self, port=53, hport=None, hsport=None, saveOption=None, wFile=None, bFile=None):
+    def __init__(self, port=53, hport=None, hsport=None):
         self.port = port
         self.http_port = hport
         self.https_port = hsport
-        self.save = saveOption
-        self.whitelist = wFile
-        self.blacklist = bFile
-    
-    def setLists(self):
-        if self.save == False and (self.http_port is not None or self.https_port is not None):
+
+    whitelist = ''
+    blacklist = ''
+    saveOp = ''
+
+
+    def setPorts(self):
+        if self.saveOp == False and (self.http_port is not None or self.https_port is not None):
              return
         else:
             temp = IOitems()
@@ -499,7 +513,6 @@ class IOitems(object):
         try:
            config_file = ConfigParser.ConfigParser()
            config_file.read(currentFile)
-           #print 'Currentfile: ' + currentFile + '  Port: ' + str(DNSport) + '  Whitelist: '+ str(whiteFile) + '  Blacklist: ' + str(blackFile)
            if config_file.has_section('Run_Time'):
                print 'Adding items'
                if DNSport is not None:
@@ -588,15 +601,26 @@ class IOitems(object):
         
     def set_save(self, save=None):
         if save is not None:
-            self.save = save
+            self.saveOp = save
+
+    def get_save(self):
+        return self.saveOp
 
     def set_wFile(self, inFile):
         if inFile is not None:
-             self.whitefile = inFile
+             whitelist = inFile
+             print 'WFin: ', inFile
+
+    def get_wFile(self):
+        return whitelist
 
     def set_bFile(self, inFile):
         if inFile is not None:
-             self.blackfile = inFile
+             blacklist = inFile
+             print 'BFin: ', inFile
+
+    def get_bFile(self):
+        return self.blacklist
 
     def startServers(self):
         #Port for either services will be set at launch on terminal or config file
@@ -611,7 +635,7 @@ class IOitems(object):
         print 'UDP server loop running on port ' + str(self.port) #in thread: %s % (thread.name)
 
         #Initialize and run HTTP services
-        self.setLists()
+        self.setPorts()
         serverList = Server()
 
         http_server = serverList.factory('HTTP', self.http_port)
@@ -672,6 +696,7 @@ class IOitems(object):
          self.set_HTTPport(arg.http_port) #needed if value is set but did not want to save
          self.set_HTTPSport(arg.https_port)
          self.set_save(arg.save_option)
+         temp = RunTimeItems(arg.whiteFile, arg.blackFile, arg.save_option)
          if arg.save_option == True: #this function prevents the program from saving garbage values if only -s is selected without params
              nullChoices = 0         #if it is run without paramaters to save, don't save
              argSize = len(vars(arg)) - 1 #There is a -1 because -s is a save flag

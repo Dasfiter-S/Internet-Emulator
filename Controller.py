@@ -10,6 +10,7 @@ import View
 import urlparse
 from dnslib import *
 
+
 class Controller(Model.IOitems):
     #Receives the raw DNS query data and extracts the name of the address. Checks the address agaisnt specified
     #lists. If the address is not found then it is forwarded to an external DNS to resolve. Forwarded
@@ -24,18 +25,14 @@ class Controller(Model.IOitems):
         strQuery = repr(qn)                            #remove class formatting
         strQuery = strQuery[12:-2]                     #DNSLabel type, strip class and take out string  
 
-        whitelist = self.whitelist
-        blacklist = self.blacklist
-        save = self.save
-        temp = Model.RunTimeItems(whitelist, blacklist, save)
-        print('wFile ' + str(self.whitelist) + '   bFile: ' + str(self.blacklist) + '   save: ' + str(self.save))
+        temp = Model.RunTimeItems(self.whitelist, self.blacklist, self.saveOp)
         temp.setLists()
         domainList = self.loadFile(temp.whitelist)
         domainDict = dict(domainList)
         blackList = self.loadFile(temp.blacklist)
         blackDictionary = dict(blackList)
         address = urlparse.urlparse(strQuery)
-        if blackDictionary.get(strQuery):#or blackDictionary(address.netloc):              
+        if blackDictionary.get(strQuery):             
             reply.add_answer(RR(rname=qn, rtype=1, rclass=1, ttl=300, rdata=A('127.0.0.1')))
         else:
             if domainDict.get(strQuery):
@@ -56,6 +53,7 @@ class Controller(Model.IOitems):
         print '--------- Reply:\n'
         print reply
         return reply.pack()   # replies with an empty pack if address is not found
+    
 
     def printThreads(self, currentThread, tnum):
         print 'Current thread: ' + str(currentThread)
