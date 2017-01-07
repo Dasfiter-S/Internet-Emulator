@@ -1,3 +1,6 @@
+#This branch is dead. Moved to Internet Emulator Branch.
+
+
 #Internet Emulator V1.2
 -----------------------------------------
 Added get_path(self) to Util.py. This new function supports the ability to enter relative paths and then hunts down the absolute path of where the file was executed and combines the result for the absolute path of the specified relative link.
