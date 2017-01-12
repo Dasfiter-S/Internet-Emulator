@@ -1,3 +1,7 @@
+#Internet Emulator V1.3
+-----------------------------------------
+Re-factored the OOP design flow of most of the program. More to come. Handlers and Servers for HTTP are inheritable and extendable.
+
 #Internet Emulator V1.2
 -----------------------------------------
 Added get_path(self) to Util.py. This new function supports the ability to enter relative paths and then hunts down the absolute path of where the file was executed and combines the result for the absolute path of the specified relative link.
