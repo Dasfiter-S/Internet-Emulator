@@ -22,38 +22,10 @@ from OpenSSL.SSL import TLSv1_METHOD, Context, Connection
 class Server(threading.Thread):
  
     def factory(self, type, port=None):
-        if type == 'HTTP': return Http_start(port)
-        elif type == 'HTTPS': return Https_start(port)
+        if type == 'HTTP': return HTTPServer(port)
+        elif type == 'HTTPS': return HTTPSServer(port)
 #        elif type == 'VShost': return VS_host(port)
         else: 'No such type ' + type
-
-
-class Http_start(Server):
-    def __init__(self, port=None):
-        threading.Thread.__init__(self)
-        self.port = port
-
-    def run(self):
-        try:
-            print 'Serving HTTP at port', self.port
-            http = SocketServer.TCPServer(('', int(self.port)), MyRequestHandler)
-            http.serve_forever()
-        except KeyboardInterrupt:
-            http.server_close()
-
-class Https_start(Server):
-    def __init__(self, port=None):
-        threading.Thread.__init__(self)
-        self.port = port
-
-    def run(self):
-        try:
-            print 'Serving HTTPS at port', self.port
-            https = BaseHTTPServer.HTTPServer(('', int(self.port)), RedirectHandler)
-            https.socket = ssl.wrap_socket(https.socket, certfile='./server.crt', server_side=True, keyfile='server.key')
-            https.serve_forever()
-        except KeyboardInterrupt:
-            https.close()
 
 class BaseServer(threading.Thread):
     def __init__(self, port=None):
@@ -61,14 +33,14 @@ class BaseServer(threading.Thread):
         self.port = port
 
     def run(self):
-        pass
+        raise NotImplementedError
 
 class HTTPServer(BaseServer):
     def run(self):
         try:
             print 'Serving HTTP at port', self.port
             http = SocketServer.TCPServer(('', int(self.port)), MyRequestHandler)
-            http.server_forver()
+            http.serve_forever()
         except KeyboardInterrupt:
             http.server_close()
 
@@ -95,39 +67,36 @@ class VS_host(Server):
     def run(self):
         try:
             if self.cert is not None:
-                print 'HTTPS '+ self.name  + ' on port: ', self.port
+                print 'HTTPS %s on port: %d ' % (self.name, self.port)
                 VS = BaseHTTPServer.HTTPServer(('', int(self.port)), self.handler)
                 VS.socket = ssl.wrap_socket(VS.socket, certfile= self.cert, server_side=True, keyfile= self.key)
                 VS.serve_forever()
             else:
-                print 'HTTP '+ self.name  + ' on port: ', self.port
+                print 'HTTP %s on port: %d ' % (self.name, self.port)
                 VS = BaseHTTPServer.HTTPServer(('', int(self.port)), MyRequestHandler)
                 VS.serve_forever()
         except KeyboardInterrupt:
             VS.close()
 
-
-class HTTPHandler(BaseHTTPServer.BaseHTTPRequestHandler):
-    server_version = 'nginx'
+class BaseHandler(BaseHTTPServer.BaseHTTPRequestHandler):
+    server_version = ''
     sys_version = ''
-
-
+    
     def do_GET(self):
-        self.__host_head() 
+        self.serve_head() 
 
     #host_head is used for http virtual hosting. If a blacklisted request is redirected to 127.0.0.1 then it is
     #resolved here and displayed while staying on port 80. Example cnn.com or foo.com
-    def __host_head(self):
+    def serve_head(self):
         host = self.headers.get('Host')
         tool = Util.Util()
         if not tool.valid_addr(host): #filter out IP address that cannot be parsed as localhost file paths
             if 'www' in host:
                 hostLinks = host.split('.')
-                hostPath = hostLinks[0] + '/' + hostLinks[1] + '/' + hostLinks[2]
             else:
-                host = 'www.' + host
+                host = 'www.%s' % (host)
                 hostLinks = host.split('.')
-                hostPath = hostLinks[0] + '/' + hostLinks[1] + '/' + hostLinks[2]
+            hostPath = '%s/%s/%s' % (hostLinks[0], hostLinks[1], hostLinks[2])
             if os.path.isdir(hostPath):
                 for index in 'index.html', 'index.htm':
                     index = os.path.join(hostPath, index)
@@ -138,7 +107,7 @@ class HTTPHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                 pathParts = path.split('index')
                 basePath = pathParts[0]
                 index = pathParts[1] 
-                path  = basePath + './index' + index
+                path  = '%s./index%s' % (basePath, index)
                 with open(path, 'rb') as f:
                      self.send_response(200)
                      self.send_header('Content-type', 'text/html')
@@ -152,25 +121,16 @@ class HTTPHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             except IOError:                                     
                 self.send_error(404, 'File not found')
         else:
-            self.send_error(404, 'The address ' + str(host) + ' was not found')
+            self.send_error(404, 'The address %s was not found' % (host))
 
 
-class HTTPShandler(HTTPHandler):
-    server_version = 'gws'
-    sys_version = ''
-
+class HTTPShandler(BaseHandler):
+    def __init__(self, pathlist=None):
+        self.pathways = pathlist
+        
     #THese lists will be moved to a file
-    pathways = {'/test-pages': 'https://127.0.0.1/test-pages', 
-                '/test-pages/': 'https://127.0.0.1/test-pages/',
-                '/test-pages/test1': 'https://127.0.0.1:8000/test-pages/test1',
-                '/test-pages/test1/': 'https://127.0.0.1:8000/test-pages/test1',
-                '/test-pages/test2': 'https://127.0.0.1:8001/test-pages/test2',
-                '/test-pages/test2/': 'https://127.0.0.1:8001/test-pages/test2',
-                '/test-pages/test3': 'https://127.0.0.1:8002/test-pages/test3',
-                '/test-pages/test3/': 'https://127.0.0.1:8002/test-pages/test3',
-               }
 
-    netAddresses = {'cnn.com': 'https://www.cnn.com:8000',
+    pathways = {'cnn.com': 'https://www.cnn.com:8000',
                     'www.cnn.com' : 'https://www.cnn.com:8000',
                     'foo.com' : 'https://www.foo.com:8001',
                     'www.foo.com' : 'https://www.foo.com:8001',
@@ -179,39 +139,25 @@ class HTTPShandler(HTTPHandler):
     page_get_fail = 'http://www.thisaddressdoesnotexist.com'
     
     #Used only for redirects, otherwise not called
-    def _do_HEAD(self):
+    def serve_head(self):
         host = self.headers.get('Host')
         self.send_response(301)
-        self.send_header('Location', self.netAddresses.get(host, self.page_get_fail))
+        self.send_header('Location', self.pathways.get(host, self.page_get_fail))
         self.end_headers()
 
-    def do_GET(self):
-        self._do_HEAD()           #used for forwarding to SSL Virtual servers, next step is to get HTTPS working
 
-
-class NginxServerHandler(HTTPHandler):
+class NginxServerHandler(BaseHandler):
     server_version = 'nginx'
 
-class ApacheServerHandler(HTTPHandler):
+class ApacheServerHandler(BaseHandler):
     server_version = 'Apache'
 
-class GwsServerHandler(HTTPHandler):
+class GwsServerHandler(BaseHandler):
     server_version = 'gws'
 
-class IISServerHandler(HTTPHandler):
+class IISServerHandler(BaseHandler):
     server_version = 'IIS'
 
-class NginxHTTPSHandler(HTTPSHandler):
-    server_version = 'nginx'
-
-class ApacheHTTPSHandler(HTTPSHandler):
-    server_version = 'Apache'
-
-class GwsHTTPSHandler(HTTPSHandler):
-    server_version = 'gws'
-
-class IISHTTPSHandler(HTTPSHandler):
-    server_version = 'IIS'
 
 #This handler is not using the factory pattern since it is the initial gate
 #for redirection if needed.
@@ -267,11 +213,10 @@ class MyRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         if not tool.valid_addr(host): #filter out IP address that cannot be parsed as localhost file paths
             if 'www' in host:
                 hostLinks = host.split('.')
-                hostPath = hostLinks[0] + '/' + hostLinks[1] + '/' + hostLinks[2]
             else:
                 host = 'www.' + host
                 hostLinks = host.split('.')
-                hostPath = hostLinks[0] + '/' + hostLinks[1] + '/' + hostLinks[2]
+            hostPath = '%s/%s/%s' % (hostLinks[0], hostLinks[1], hostLinks[2])
             if os.path.isdir(hostPath):
                 for index in 'index.html', 'index.htm':
                     index = os.path.join(hostPath, index)
@@ -306,41 +251,6 @@ def VirtualHandler(serverType=None, webURL=None):
         server_version = serverType
         sys_version = ''
 
-        def __send_head(self):
-            path = self.__translate_path(self.path)
-            if os.path.isdir(path):
-                if not self.path.endswith('/'):
-                    self.send_response(301)
-                    self.send_header('Location', self.path + '/')
-                    self.end_headers()
-                    return None
-                for index in 'index.html', 'index.htm':
-                    index = os.path.join(path, index)
-                    if os.path.exists(index):
-                        path = index
-                        break
-        #take the path of the index found from the executed file and use it as the root directory
-        #need to use relative paths for code portability
-            try:  
-                if not socket.inet_aton(self.path):
-                    pathLinks = path.split('.')
-                    path = pathLinks[0]
-                    path = path[:-1] + self.path + '.' + pathLinks[1] + '.' + pathLinks[2]
-                else:
-                    self.send_error(404, 'File not found', )
-                with open(path, 'rb') as f:
-                     self.send_response(200)
-                     self.send_header('Content-type', 'text/html')
-                     fs = os.fstat(f.fileno())
-                     self.send_header('Content-Length', str(fs.st_size))      #Used for TCP connections
-                     self.send_header('Last-Modified', self.date_time_string(fs.st_mtime))
-                     self.end_headers()
-                     show = View.View()
-                     show.response(f, self.wfile)
-
-            except IOError:
-                self.send_error(404, 'File not found')
-                return None
 
         def __host_head(self):
             host = self.headers.get('Host')
@@ -398,7 +308,7 @@ def VirtualHandler(serverType=None, webURL=None):
 
 
         def do_GET(self):
-            print 'Current web URL: ', webURL
+            print 'Current web URL: %s' % (webURL)
             self.__host_head()
 
     return VSHandler
@@ -414,9 +324,9 @@ class RunTimeItems(object):
         self.whitelist = IOitems.whitelist
         self.blacklist = IOitems.blacklist
         self.save = IOitems.saveOp
-        print 'set Save: ', self.save
-        print 'set Blacklist: ', self.blacklist
-        print 'set Whitelist: ', self.whitelist
+        print 'set Save: %s' % (self.save)
+        print 'set Blacklist: %s' (self.blacklist)
+        print 'set Whitelist: %s' (self.whitelist)
         temp = IOitems()
         items = temp.loadConfig()
         if self.save is None and (self.blacklist is not None or self.whitelist is not None):

@@ -14,17 +14,13 @@ from dnslib import *
 
 
 class Controller(object):
-    def __init__(self, whitefile=None, blackfile=None)
-        self.whitelist = whitefile
-        self.blacklist = blackfile
     #Receives the raw DNS query data and extracts the name of the address. Checks the address agaisnt specified
     #lists. If the address is not found then it is forwarded to an external DNS to resolve. Forwarded
     #requests send the raw query data and receive raw data.
     def dns_response(self, data):
         log = View.View()
         request = DNSRecord.parse(data)
-        print 'Searching: '
-        print request
+        print 'Searching: \n %s' % (str(request))
         reply = DNSRecord(DNSHeader(id=request.header.id, qr=1, aa=1, ra=1), q=request.q)
         qn = request.q.qname
         strQuery = repr(qn)                            #remove class formatting
@@ -49,20 +45,17 @@ class Controller(object):
                     answerData, fromaddr = realDNS.recvfrom(1024)
                     realDNS.close()
                     readableAnswer = DNSRecord.parse(answerData) 
-                    print'--------- Reply:\n'
-                    print str(readableAnswer)
+                    print'--------- Reply:\n %s' % (str(readableAnswer))
                     return answerData 
                 except socket.gaierror: 
                     print '-------------NOT A VALID ADDRESS--------------'
  
-        print '--------- Reply:\n'
-        print reply
+        print '--------- Reply:\n %s' % (str(reply))
         return reply.pack()   # replies with an empty pack if address is not found
     
 
     def printThreads(self, currentThread, tnum):
-        print 'Current thread: ' + str(currentThread)
-        print 'Current threads alive: ' + str(tnum)
+        print 'Current thread: %s \n Current threads alive: %d' % (str(currentThread), tnum)
 
 
     class BaseRequestHandler(SocketServer.BaseRequestHandler):
@@ -126,10 +119,10 @@ class IOitems(object):
                     dictList = dict(domainList)
                 with open(currentFile, 'a+') as fileData:
                     if DomainItem.name in dictList:
-                        print DomainItem.name + ' already exists in database'
+                        print '%s already exists in database' % (DomainItem.name)
                     elif DomainItem.name not in dictList:
-                        fileData.write(str(DomainItem.name) + ', ' + str(DomainItem.IP) + '\n')
-                        print DomainItem.name + ' with IP ' + DomainItem.IP + ' has been added to the database'
+                        fileData.write('%s, %d \n' % (DomainItem.name, DomainItem.IP))
+                        print '%s with IP %s has been added to the database' % (DomainItem.name, DomainItem.IP)
         except IOError:
             print 'File not found, specify a valid file'
             sys.exit(1)
@@ -142,9 +135,9 @@ class IOitems(object):
                     dictList = dict(domainList)
                 with open(currentFile, 'a+') as fileData:
                     if siteName in dictList:
-                        print siteName + ' already exists in database'
+                        print '%s already exists in database' % (sitename)
                     elif sitename not in dictList:
-                        fileData.write(str(siteName) + ', ' + str(IP) + '\n')
+                        fileData.write('%s, %d \n' % (siteName, IP))
         except IOError:
             print 'File not found, specify a valid file'
             sys.exit(1)
@@ -262,7 +255,7 @@ class IOitems(object):
                    config_file.set('Domain', 'TTL', domain.TTL)
                    config_file.set('Domain', 'Port', domain.port)
                    config_file.set('Domain', 'Admin', domain.admin)
-           print 'Writing to file: ' + currentFile
+           print 'Writing to file: %s' % (currentFile)
            with open(currentFile, 'w') as configfile:
                config_file.write(configfile)
         except IOError:
@@ -296,7 +289,7 @@ class IOitems(object):
     def set_wFile(self, inFile):
         if inFile is not None:
              whitelist = inFile
-             print 'WFin: ', inFile
+             print 'WFin: %s' % inFile
 
     def get_wFile(self):
         return whitelist
@@ -304,7 +297,7 @@ class IOitems(object):
     def set_bFile(self, inFile):
         if inFile is not None:
              blacklist = inFile
-             print 'BFin: ', inFile
+             print 'BFin: %s' % inFile
 
     def get_bFile(self):
         return self.blacklist
@@ -317,7 +310,7 @@ class IOitems(object):
         thread = threading.Thread(target=server[0].serve_forever)
         thread.daemon = True
         thread.start()
-        print 'UDP server loop running on port ' + str(self.port) #in thread: %s % (thread.name)
+        print 'UDP server loop running on port %d' % (self.port) #in thread: %s % (thread.name)
 
         #Initialize and run HTTP services
         self.setPorts()
@@ -348,7 +341,7 @@ class IOitems(object):
         serverNames = ['nginx', 'IIS', 'Apache', 'gws', 'lighttpd']
         URLs = ['', '/test-pages/test2', '/test-pages/test3']
         for number in range(len(keys)):
-            VS_servers.append('VS' + str(number))
+            VS_servers.append('VS%d' % (number))
             VS_servers[number] = Model.VS_host(ports[number], tool.get_path(certs[number]), tool.get_path(keys[number]), Model.VirtualHandler(serverNames[number], URLs[number]), name= VS_servers[number])
             VS_servers[number].daemon = True
             VS_servers[number].start()
