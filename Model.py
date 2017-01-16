@@ -168,51 +168,11 @@ class HandlerFactory(object):
         else:
             print '%s type of handler not found.' % (name)
         
-#This handler is not using the factory pattern since it is the initial gate
-#for redirection if needed.
-class RedirectHandler(BaseHTTPServer.BaseHTTPRequestHandler):
-
-    server_version = 'gws'
-    sys_version = ''
-
-    #THese lists will be moved to a file
-    pathways = {'/test-pages': 'https://127.0.0.1/test-pages', 
-                '/test-pages/': 'https://127.0.0.1/test-pages/',
-                '/test-pages/test1': 'https://127.0.0.1:8000/test-pages/test1',
-                '/test-pages/test1/': 'https://127.0.0.1:8000/test-pages/test1',
-                '/test-pages/test2': 'https://127.0.0.1:8001/test-pages/test2',
-                '/test-pages/test2/': 'https://127.0.0.1:8001/test-pages/test2',
-                '/test-pages/test3': 'https://127.0.0.1:8002/test-pages/test3',
-                '/test-pages/test3/': 'https://127.0.0.1:8002/test-pages/test3',
-               }
-
-    netAddresses = {'cnn.com': 'https://www.cnn.com:8000',
-                    'www.cnn.com' : 'https://www.cnn.com:8000',
-                    'foo.com' : 'https://www.foo.com:8001',
-                    'www.foo.com' : 'https://www.foo.com:8001',
-                  }
-
-    page_get_fail = 'http://www.thisaddressdoesnotexist.com'
-    
-    #Used only for redirects, otherwise not called
-    def _do_HEAD(self):
-        host = self.headers.get('Host')
-        self.send_response(301)
-        self.send_header('Location', self.netAddresses.get(host, self.page_get_fail))
-        self.end_headers()
-
-    def do_GET(self):
-        self._do_HEAD()           #used for forwarding to SSL Virtual servers, next step is to get HTTPS working
-
-
 def setLists(self):
     if self is None:
         self = Controller.IOitems()
         items = self.loadConfig()
     else:
-        print 'set Save: %s' % (self.save)
-        print 'set Blacklist: %s' % (self.blacklist)
-        print 'set Whitelist: %s' % (self.whitelist)
         items = self.loadConfig()
         if self.save is None and (self.blacklist is not None or self.whitelist is not None):
             print 'Skipping list save for Wf and Bf'
