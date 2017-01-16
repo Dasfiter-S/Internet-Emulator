@@ -13,84 +13,14 @@ import ConfigParser
 from dnslib import *
 
 
-class Controller(object):
-    #Receives the raw DNS query data and extracts the name of the address. Checks the address agaisnt specified
-    #lists. If the address is not found then it is forwarded to an external DNS to resolve. Forwarded
-    #requests send the raw query data and receive raw data.
-    def dns_response(self, data):
-        log = View.View()
-        request = DNSRecord.parse(data)
-        print 'Searching: \n %s' % (str(request))
-        reply = DNSRecord(DNSHeader(id=request.header.id, qr=1, aa=1, ra=1), q=request.q)
-        qn = request.q.qname
-        strQuery = repr(qn)                            #remove class formatting
-        strQuery = strQuery[12:-2]                     #DNSLabel type, strip class and take out string  
-
-        temp = Model.RunTimeItems(self.whitelist, self.blacklist, self.saveOp)
-        temp.setLists()
-        domainList = self.loadFile(temp.whitelist)
-        domainDict = dict(domainList)
-        blackList = self.loadFile(temp.blacklist)
-        blackDictionary = dict(blackList)
-        address = urlparse.urlparse(strQuery)
-        if blackDictionary.get(strQuery):             
-            reply.add_answer(RR(rname=qn, rtype=1, rclass=1, ttl=300, rdata=A('127.0.0.1')))
-        else:
-            if domainDict.get(strQuery):
-                reply.add_answer(RR(rname=qn, rtype=1, rclass=1, ttl=300, rdata=A(domainDict[strQuery])))
-            else:
-                try:
-                    realDNS = socket.socket( socket.AF_INET, socket.SOCK_DGRAM)
-                    realDNS.sendto(data,('8.8.8.8', 53))
-                    answerData, fromaddr = realDNS.recvfrom(1024)
-                    realDNS.close()
-                    readableAnswer = DNSRecord.parse(answerData) 
-                    print'--------- Reply:\n %s' % (str(readableAnswer))
-                    return answerData 
-                except socket.gaierror: 
-                    print '-------------NOT A VALID ADDRESS--------------'
- 
-        print '--------- Reply:\n %s' % (str(reply))
-        return reply.pack()   # replies with an empty pack if address is not found
-    
-
-    def printThreads(self, currentThread, tnum):
-        print 'Current thread: %s \n Current threads alive: %d' % (str(currentThread), tnum)
-
-
-    class BaseRequestHandler(SocketServer.BaseRequestHandler):
-
-        def get_data(self):
-            raise NotImplementedError
-
-        def send_data(self, data):
-            raise NotImplementedError
-
-        def handle(self):
-            now = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')
-            print '\n\n%s request %s (%s %s):' % (self.__class__.__name__[:3], now, self.client_address[0], self.client_address[1])
-
-            try:
-                data = self.get_data()
-                print len(data), data.encode('hex')
-                self.send_data(Controller().dns_response(data))
-            except Exception:
-                traceback.print_exc(file=sys.stderr)
-
-    class UDPRequestHandler(BaseRequestHandler, ):
-
-        def get_data(self):
-            return self.request[0]
-
-        def send_data(self, data):
-            return self.request[1].sendto(data, self.client_address)
- 
-
 class IOitems(object):
-    def __init__(self, port=53, hport=None, hsport=None):
+    def __init__(self, port=53, hport=None, hsport=None, whiteFile=None, blackFile=None, saveOP=False):
         self.port = port
         self.http_port = hport
         self.https_port = hsport
+        self.whitelist = whiteFile
+        self.blacklist = blackFile
+        self.save = saveOP
 
 
     def setPorts(self):
@@ -288,25 +218,20 @@ class IOitems(object):
 
     def set_wFile(self, inFile):
         if inFile is not None:
-             whitelist = inFile
+             self.whitelist = inFile
              print 'WFin: %s' % inFile
-
-    def get_wFile(self):
-        return whitelist
 
     def set_bFile(self, inFile):
         if inFile is not None:
-             blacklist = inFile
+             self.blacklist = inFile
              print 'BFin: %s' % inFile
-
-    def get_bFile(self):
-        return self.blacklist
 
     def startServers(self):
         #Port for either services will be set at launch on terminal or config file
         # run the DNS services
         tool = Util.Util()
-        server = [SocketServer.ThreadingUDPServer(('', self.port), Controller.UDPRequestHandler),]
+        control = Controller(self)
+        server = [SocketServer.ThreadingUDPServer(('', self.port), control.UDPRequestHandler),]
         thread = threading.Thread(target=server[0].serve_forever)
         thread.daemon = True
         thread.start()
@@ -339,10 +264,12 @@ class IOitems(object):
                  8000, 8001, 8002]
         VS_servers = []
         serverNames = ['nginx', 'IIS', 'Apache', 'gws', 'lighttpd']
-        URLs = ['', '/test-pages/test2', '/test-pages/test3']
+        handler = Model.HandlerFactory()
         for number in range(len(keys)):
             VS_servers.append('VS%d' % (number))
-            VS_servers[number] = Model.VS_host(ports[number], tool.get_path(certs[number]), tool.get_path(keys[number]), Model.VirtualHandler(serverNames[number], URLs[number]), name= VS_servers[number])
+            VS_servers[number] = Model.VS_host(ports[number], tool.get_path(certs[number]),
+                                 tool.get_path(keys[number]), handler.factory(serverNames[number]),
+                                 name= VS_servers[number])
             VS_servers[number].daemon = True
             VS_servers[number].start()
 
@@ -357,4 +284,77 @@ class IOitems(object):
         finally:
                server[0].shutdown()
                print 'Server terminated by SIGINT'
+
+class Controller(IOitems):
+
+    #Receives the raw DNS query data and extracts the name of the address. Checks the address agaisnt specified
+    #lists. If the address is not found then it is forwarded to an external DNS to resolve. Forwarded
+    #requests send the raw query data and receive raw data.
+    def dns_response(self, data):
+        log = View.View()
+        request = DNSRecord.parse(data)
+        print 'Searching: \n %s' % (str(request))
+        reply = DNSRecord(DNSHeader(id=request.header.id, qr=1, aa=1, ra=1), q=request.q)
+        qn = request.q.qname
+        strQuery = repr(qn)                            #remove class formatting
+        strQuery = strQuery[12:-2]                     #DNSLabel type, strip class and take out string  
+
+        temp = Model.setLists(self)
+        domainList = self.loadFile(temp[0])
+        domainDict = dict(domainList)
+        blackList = self.loadFile(temp[1])
+        blackDictionary = dict(blackList)
+        address = urlparse.urlparse(strQuery)
+        if blackDictionary.get(strQuery):             
+            reply.add_answer(RR(rname=qn, rtype=1, rclass=1, ttl=300, rdata=A('127.0.0.1')))
+        else:
+            if domainDict.get(strQuery):
+                reply.add_answer(RR(rname=qn, rtype=1, rclass=1, ttl=300, rdata=A(domainDict[strQuery])))
+            else:
+                try:
+                    realDNS = socket.socket( socket.AF_INET, socket.SOCK_DGRAM)
+                    realDNS.sendto(data,('8.8.8.8', 53))
+                    answerData, fromaddr = realDNS.recvfrom(1024)
+                    realDNS.close()
+                    readableAnswer = DNSRecord.parse(answerData) 
+                    print'--------- Reply:\n %s' % (str(readableAnswer))
+                    return answerData 
+                except socket.gaierror: 
+                    print '-------------NOT A VALID ADDRESS--------------'
+ 
+        print '--------- Reply:\n %s' % (str(reply))
+        return reply.pack()   # replies with an empty pack if address is not found
+    
+
+    def printThreads(self, currentThread, tnum):
+        print 'Current thread: %s \n Current threads alive: %d' % (str(currentThread), tnum)
+
+
+    class BaseRequestHandler(SocketServer.BaseRequestHandler):
+
+        def get_data(self):
+            raise NotImplementedError
+
+        def send_data(self, data):
+            raise NotImplementedError
+
+        def handle(self):
+            now = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')
+            print '\n\n%s request %s (%s %s):' % (self.__class__.__name__[:3], now, self.client_address[0], self.client_address[1])
+
+            try:
+                data = self.get_data()
+                print len(data), data.encode('hex')
+                self.send_data(Controller().dns_response(data))
+            except Exception:
+                traceback.print_exc(file=sys.stderr)
+
+    class UDPRequestHandler(BaseRequestHandler, ):
+
+        def get_data(self):
+            return self.request[0]
+
+        def send_data(self, data):
+            return self.request[1].sendto(data, self.client_address)
+ 
 

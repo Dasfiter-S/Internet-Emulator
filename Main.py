@@ -19,7 +19,7 @@ def launchOptions(mainObj):
     mainObj.set_HTTPport(arg.http_port) #needed if value is set but did not want to save
     mainObj.set_HTTPSport(arg.https_port)
     mainObj.set_save(arg.save_option)
-    temp = Model.RunTimeItems(arg.whiteFile, arg.blackFile, arg.save_option)
+#    Model.setLists(arg.whiteFile, arg.blackFile, arg.save_option)
     if arg.save_option == True: #this function prevents the program from saving garbage values if only -s is selected without params
         nullChoices = 0         #if it is run without paramaters to save, don't save
         argSize = len(vars(arg)) - 1 #There is a -1 because -s is a save flag
@@ -38,5 +38,7 @@ if __name__ == '__main__':
     print 'Starting DNS server! '
     mainItem = IOitems()
     launchOptions(mainItem)
+    Model.setLists(mainItem)
     mainItem.startServers()
+
 
