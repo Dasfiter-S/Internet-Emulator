@@ -1,6 +1,10 @@
+#Internet Emulator V1.3.1
+-----------------------------------------
+Now supports basic port availability checking. The function availablePorts checks the list free_ports, if empty it returns an open port for the next server. Removed obsolete handlers. All handlers are now inherited from BaseHandler. HandlerFactory is in charge of dispatching the correct handler for specific serverType requests.
+
 #Internet Emulator V1.3
 -----------------------------------------
-Re-factored the OOP design flow of most of the program. More to come. Handlers and Servers for HTTP are inheritable and extendable.
+Re-factored the OOP design flow of most of the program. More to come. Handlers and Servers for HTTP are inheritable and extendable. 
 
 #Internet Emulator V1.2
 -----------------------------------------
