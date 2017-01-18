@@ -12,6 +12,7 @@ import urllib
 import posixpath
 import shutil
 import ssl
+import re
 import StringIO
 import Util
 from dnslib import *
@@ -47,17 +48,16 @@ class HTTPServer(BaseServer):
 class HTTPSServer(BaseServer):
     def run(self):
         try:
-            print 'Seving HTTPS at port', self.port
+            print 'Serving HTTPS at port', self.port
             https = BaseHTTPServer.HTTPServer(('', int(self.port)), HTTPShandler)
             https.socket = ssl.wrap_socket(https.socket, certfile='./server.crt', server_side=True, keyfile='server.key')
             https.serve_forever()
         except KeyboardInterrupt:
             https.close()
 
-class VS_host(threading.Thread):
-    def __init__(self, port=8000, cert=None, key=None, handler= None, name= ''):
-        threading.Thread.__init__(self)
-        self.port = port
+class VS_host(BaseServer):
+    def __init__(self, port=None, cert=None, key=None, handler= None, name= ''):
+        super(VS_host, self).__init__(port)
         self.cert = cert
         self.key = key
         self.handler = handler
@@ -75,7 +75,15 @@ class VS_host(threading.Thread):
                 VS = BaseHTTPServer.HTTPServer(('', int(self.port)), MyRequestHandler)
                 VS.serve_forever()
         except KeyboardInterrupt:
+#        except keepRunning():
             VS.close()
+
+      #This function determines when the request pool for a site has been exhausted
+#     def keepRunning(self):
+#         if len(queue) == 0:
+#             return False
+#         else:
+#              return True
 
 class BaseHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     server_version = ''
@@ -92,12 +100,11 @@ class BaseHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         if not tool.valid_addr(host): #filter out IP address that cannot be parsed as localhost file paths
             if ':' in host:
                 host = host.split(':')[0]
-            if 'www' in host:
-                hostLinks = host.split('.')
-            else:
+            subString = re.search('\Awww', host)  
+            if 'www'  not in subString.group(0):
                 host = 'www.%s' % (host)
-                hostLinks = host.split('.')
-            hostPath = '%s/%s/%s' % (hostLinks[0], hostLinks[1], hostLinks[2])
+
+            hostPath = re.sub('\.', '/', host)
             if os.path.isdir(hostPath):
                 for index in 'index.html', 'index.htm':
                     index = os.path.join(hostPath, index)
@@ -105,11 +112,8 @@ class BaseHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                         location = index
                         break
             try: 
-                print 'Index: ', location
-                pathParts = location.split('index')
-                basePath = pathParts[0]
-                index = pathParts[1] 
-                location  = '%s./index%s' % (basePath, index)
+#                print 'Index: ', location
+                location = re.sub('/index', '/./index', location)
                 with open(location, 'rb') as f:
                      self.send_response(200)
                      self.send_header('Content-type', 'text/html')
@@ -128,20 +132,23 @@ class BaseHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
 class HTTPShandler(BaseHandler):
         
-    #THese lists will be moved to a file
+    #These lists will be moved to a file
 
     pathways = {'cnn.com': 'https://www.cnn.com:8000',
                     'www.cnn.com' : 'https://www.cnn.com:8000',
                     'foo.com' : 'https://www.foo.com:8001',
                     'www.foo.com' : 'https://www.foo.com:8001',
                   }
+    #Dynamic test path
+    #Will create a link that is host + free port
 
-    page_get_fail = 'http://www.thisaddressdoesnotexist.com'
+    page_get_fail = 'http://www.google.com'
     
     #Used only for redirects, otherwise not called
     def serve_head(self):
         host = self.headers.get('Host')
         self.send_response(301)
+#        testPath = {host: 'https://%s:%s' % (host, free_port)}
         self.send_header('Location', self.pathways.get(host, self.page_get_fail))
         self.end_headers()
 

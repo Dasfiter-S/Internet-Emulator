@@ -196,15 +196,9 @@ class IOitems(object):
         if port is not None:
             self.port = port
 
-    def get_DNSport(self):
-        return self.port
-
     def set_HTTPport(self, port):
         if port is not None:
             self.http_port = port
-
-    def get_HTTPport(self):
-        return self.http_port
 
     def set_HTTPSport(self, port):
         self.https_port = port
@@ -212,9 +206,6 @@ class IOitems(object):
     def set_save(self, save=None):
         if save is not None:
             self.saveOp = save
-
-    def get_save(self):
-        return self.saveOp
 
     def set_wFile(self, inFile):
         if inFile is not None:
@@ -225,6 +216,16 @@ class IOitems(object):
         if inFile is not None:
              self.blacklist = inFile
              print 'BFin: %s' % inFile
+
+    def availablePorts(self, free_ports, servers=None):
+        if len(free_ports) == 0:
+            servers += 8000
+            return servers
+        else:
+            return free_ports.pop()
+
+    def addFreePorts(self, free_ports, free_port=None):
+        free_ports.append(free_port)
 
     def startServers(self):
         #Port for either services will be set at launch on terminal or config file
@@ -263,16 +264,23 @@ class IOitems(object):
         ports = [#443, 
                  8000, 8001, 8002]
         VS_servers = []
+
+        free_ports = [] #Used to keep track of free ports
+
         serverNames = ['nginx', 'IIS', 'Apache', 'gws', 'lighttpd']
         handler = Model.HandlerFactory()
         for number in range(len(keys)):
             VS_servers.append('VS%d' % (number))
-            VS_servers[number] = Model.VS_host(ports[number], tool.get_path(certs[number]),
+            VS_servers[number] = Model.VS_host(self.availablePorts(free_ports, number), tool.get_path(certs[number]),
                                  tool.get_path(keys[number]), handler.factory(serverNames[number]),
                                  name= VS_servers[number])
             VS_servers[number].daemon = True
             VS_servers[number].start()
 
+#        sites = Model.HTTPShandler.pathways['cnn.com']
+#        print 'Sites: ', sites
+#        sites = sites[:-1] + '9'
+#        print 'Sites: ', sites
         try:        #move to main or controller and re-write
             while 1:
                 time.sleep(1)
@@ -357,4 +365,3 @@ class Controller(IOitems):
         def send_data(self, data):
             return self.request[1].sendto(data, self.client_address)
  
-
