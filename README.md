@@ -1,3 +1,7 @@
+#Internet Emulator V1.3.2
+-----------------------------------------
+Now checks strings using RegEx for added accuracy. Basic implementation of dynamic pathways is underway. Cleaned up some code that was redundant.
+
 #Internet Emulator V1.3.1
 -----------------------------------------
 Now supports basic port availability checking. The function availablePorts checks the list free_ports, if empty it returns an open port for the next server. Removed obsolete handlers. All handlers are now inherited from BaseHandler. HandlerFactory is in charge of dispatching the correct handler for specific serverType requests. Working on handling dynamic VS_Host instances that serve a request queue type and then close the server once requests are done.
