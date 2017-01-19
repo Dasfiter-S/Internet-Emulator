@@ -103,20 +103,16 @@ class HandlerFactory(object):
             print '%s type of handler not found.' % (name)
         
 def setLists(self):
-    if self is None:
-        self = Controller.IOitems()
-        items = self.loadConfig()
-    else:
-        items = self.loadConfig()
-        if self.save is None and (self.blacklist is not None or self.whitelist is not None):
-            print 'Skipping list save for Wf and Bf'
-            if self.whitelist is not None and self.blacklist is None:
-                self.blacklist = items['Blacklist']
-            if self.blacklist is not None and self.whitelist is None:
-                self.whitelist = items['Whitelist']
-        else:
-            print 'List save for Wf and Bf'
-            self.whitelist = items['Whitelist']
+    items = self.loadConfig()
+    if self.save is None and (self.blacklist is not None or self.whitelist is not None):
+#         print 'Skipping list save for Wf and Bf'
+        if self.whitelist is not None and self.blacklist is None:
             self.blacklist = items['Blacklist']
+        if self.blacklist is not None and self.whitelist is None:
+            self.whitelist = items['Whitelist']
+    else:
+#         print 'List save for Wf and Bf'
+        self.whitelist = items['Whitelist']
+        self.blacklist = items['Blacklist']
     lists = self.whitelist, self.blacklist
     return lists

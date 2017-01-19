@@ -9,9 +9,6 @@ import os
 
 class View(object):
 
-    def response(self, source, destination):
-        shutil.copyfileobj(source, destination)
-    
     #create a log that is shared between all files 
     def startLog(filename='Inet_emulator.log', level=logging.DEBUG):
         logging.basicConfig(filename, level)
@@ -57,8 +54,7 @@ class BaseHandler(BaseHTTPServer.BaseHTTPRequestHandler):
                      self.send_header('Content-Length', str(fs.st_size))      #Used for TCP connections
                      self.send_header('Last-Modified', self.date_time_string(fs.st_mtime))
                      self.end_headers()
-                     show = View()
-                     show.response(f, self.wfile)
+                     shutil.copyfileobj(f, self.wfile)
 
             except IOError:
                 self.send_error(404, 'File not found')
