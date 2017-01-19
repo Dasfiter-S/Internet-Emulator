@@ -231,16 +231,13 @@ class IOitems(object):
         #Port for either services will be set at launch on terminal or config file
         # run the DNS services
         tool = Util.Util()
-        control = Controller(self)
-        server = [SocketServer.ThreadingUDPServer(('', self.port), control.UDPRequestHandler),]
-        thread = threading.Thread(target=server[0].serve_forever)
-        thread.daemon = True
-        thread.start()
-        print 'UDP server loop running on port %d' % (self.port) #in thread: %s % (thread.name)
-
-        #Initialize and run HTTP services
+        
+        #Initialize and run DNS, HTTP and HTTPS
         self.setPorts()
         serverList = Model.Server()
+        DNS_server = serverList.factory('DNS', self.port)
+        DNS_server.daemon = True
+        DNS_server.start()
 
         http_server = serverList.factory('HTTP', self.http_port)
         http_server.daemon = True
@@ -252,12 +249,12 @@ class IOitems(object):
         https_server.start()
         
         #Move these items to the config file
-        certs = [#'/Users/ricardocarretero/dev/vm/ubuntu1404/./server.key',
+        certs = [#'/ubuntu1404/./server.key',
                  '/certs/./test1cert.pem',
                  '/certs/./test2cert.pem',
                  '/certs/./test3cert.pem']
 
-        keys = [# '/Users/ricardocarretero/dev/vm/ubuntu1404/./server.crt',
+        keys = [# '/ubuntu1404/./server.crt',
                  '/certs/./test1key.pem',
                  '/certs/./test2key.pem',
                  '/certs/./test3key.pem']
@@ -267,8 +264,12 @@ class IOitems(object):
 
         free_ports = [] #Used to keep track of free ports
 
-        serverNames = ['nginx', 'IIS', 'Apache', 'gws', 'lighttpd']
+        serverNames = ['nginx', 'IIS', 'Apache', 'gws', 'lighttpd'] #This list will be replaced by header requests
         handler = Model.HandlerFactory()
+        #Spawn VS on page request instead of creating static servers
+        #create method for get_cert that matches host request
+        #get server handler request type from HTTPS handler
+        
         for number in range(len(keys)):
             VS_servers.append('VS%d' % (number))
             VS_servers[number] = Model.VS_host(self.availablePorts(free_ports, number), tool.get_path(certs[number]),
@@ -281,17 +282,7 @@ class IOitems(object):
 #        print 'Sites: ', sites
 #        sites = sites[:-1] + '9'
 #        print 'Sites: ', sites
-        try:        #move to main or controller and re-write
-            while 1:
-                time.sleep(1)
-                sys.stderr.flush()
-                sys.stdout.flush()
-
-        except KeyboardInterrupt:
-            pass
-        finally:
-               server[0].shutdown()
-               print 'Server terminated by SIGINT'
+       
 
 class Controller(IOitems):
 

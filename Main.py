@@ -33,6 +33,13 @@ def launchOptions(mainObj):
             print 'Saving settings'
             self.writeToConfig('config.ini', str(arg.dns_port), arg.whiteFile, arg.blackFile, str(arg.http_port), str(arg.https_port))
 
+def keepRunning():
+    running = False
+    try:
+        running = True
+    except KeyboardInterrupt:
+        running = False
+    return running
 
 if __name__ == '__main__':
     print 'Starting DNS server! '
@@ -40,5 +47,12 @@ if __name__ == '__main__':
     launchOptions(mainItem)
     Model.setLists(mainItem)
     mainItem.startServers()
+    while(keepRunning()):
+        pass
 
+        
 
+#move config.ini to main
+#ping the servers for time out and check if it exists if not continue
+#server_is_up for pinging
+#timeout for ping in config.ini
