@@ -1,3 +1,7 @@
+#Internet Emulator V1.4
+-----------------------------------------
+View.py has been updated to contain all the handlers. Any type of HTTP or HTTPS handler is now shown through the View file. Updated the DNS server code to inherit from the base server class.
+
 #Internet Emulator V1.3.2
 -----------------------------------------
 Now checks strings using RegEx for added accuracy. Basic implementation of dynamic pathways is underway. Cleaned up some code that was redundant.
