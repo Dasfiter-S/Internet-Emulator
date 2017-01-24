@@ -1,3 +1,7 @@
+#Internet Emulator V2
+-----------------------------------------
+HTTPS sites will be served from the port 443 exclusively. Virtual Hosting is already supported for HTTP on port 80. Deleted most of the Virtual Server code for HTTPS and also removed most of the code that is no longer relevant to maintaining a multiport/server stucture for HTTPS
+
 #Internet Emulator V1.4
 -----------------------------------------
 View.py has been updated to contain all the handlers. Any type of HTTP or HTTPS handler is now shown through the View file. Updated the DNS server code to inherit from the base server class.
