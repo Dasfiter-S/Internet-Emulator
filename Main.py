@@ -19,26 +19,28 @@ def launchOptions(mainObj):
     mainObj.set_HTTPport(arg.http_port) #needed if value is set but did not want to save
     mainObj.set_HTTPSport(arg.https_port)
     mainObj.set_save(arg.save_option)
-#    Model.setLists(arg.whiteFile, arg.blackFile, arg.save_option)
     if arg.save_option == True: #this function prevents the program from saving garbage values if only -s is selected without params
-        nullChoices = 0         #if it is run without paramaters to save, don't save
-        argSize = len(vars(arg)) - 1 #There is a -1 because -s is a save flag
+        null_choices = 0         #if it is run without paramaters to save, don't save
+        print 'Save is true'
+        arg_size = len(vars(arg)) - 1 #There is a -1 because -s is a save flag and does not take parameters
         for value in vars(arg):
             if getattr(arg, value) == None:
-                nullChoices = nullChoices + 1
-        if arg.readfile == True and nullChoices < argSize:
+                null_choices += 1
+        print 'Null choices %d vs argSize %d' % (null_choices, arg_size)
+        if arg.readfile is not None and null_choices < arg_size:
             print 'Saving to new config file'
-            self.writeToConfig(arg.readfile, str(arg.dns_port), arg.whiteFile, arg.blackFile, str(arg.http_port), str(arg.https_port))
-        elif arg.readfile == False and nullChoices < argSize:
-            print 'Saving settings'
-            self.writeToConfig('config.ini', str(arg.dns_port), arg.whiteFile, arg.blackFile, str(arg.http_port), str(arg.https_port))
+            mainObj.writeToConfig(arg.readfile, str(arg.dns_port), arg.whiteFile, arg.blackFile, str(arg.http_port), str(arg.https_port))
+        elif arg.readfile is None and null_choices < arg_size:
+            print 'Saving settings' 
+            mainObj.writeToConfig('config.ini', str(arg.dns_port), arg.whiteFile, arg.blackFile, str(arg.http_port), str(arg.https_port))
 
 def keepRunning():
-    running = False
+    running = True
     try:
         running = True
     except KeyboardInterrupt:
         running = False
+
     return running
 
 if __name__ == '__main__':
@@ -46,11 +48,18 @@ if __name__ == '__main__':
     mainItem = IOitems()
     launchOptions(mainItem)
     Model.setLists(mainItem)
-    mainItem.startServers()
-    while(keepRunning()):
-        pass
-
-        
+    virtual_servers = []
+    sites_up = {}
+    free_ports = []
+    mainItem.startServers(virtual_servers, sites_up, free_ports)
+    try:
+        while(keepRunning()):
+           time.sleep(1)
+           sys.stderr.flush()
+           sys.stdout.flush()
+    except KeyboardInterrupt:
+        logging.debug('Terminated via SIGINT')
+        sys.exit(1)
 
 #move config.ini to main
 #ping the servers for time out and check if it exists if not continue

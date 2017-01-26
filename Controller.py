@@ -10,11 +10,13 @@ import View
 import urlparse
 import Util
 import ConfigParser
+import logging
+import sockDev
 from dnslib import *
 
 
 class IOitems(object):
-    def __init__(self, port=53, hport=None, hsport=None, whiteFile=None, blackFile=None, saveOP=False):
+    def __init__(self, port=None, hport=None, hsport=None, whiteFile=None, blackFile=None, saveOP=False):
         self.port = port
         self.http_port = hport
         self.https_port = hsport
@@ -29,6 +31,7 @@ class IOitems(object):
         else:
             temp = IOitems()
             items = temp.loadConfig()
+            self.port = items['DNSport']
             self.http_port = items['HTTPport']
             self.https_port = items['HTTPSport']
 
@@ -39,6 +42,7 @@ class IOitems(object):
             return domainList
         except IOError:
             print 'File not found, specify a valid file'
+            logging.error('File not found, please specify a valid file')
             sys.exit(1)
 
     def addToCache(self, DomainItem, currentFile):
@@ -50,11 +54,14 @@ class IOitems(object):
                 with open(currentFile, 'a+') as fileData:
                     if DomainItem.name in dictList:
                         print '%s already exists in database' % (DomainItem.name)
+                        logging.debug('%s already exists in database' % (Domain.Item.name))
                     elif DomainItem.name not in dictList:
                         fileData.write('%s, %d \n' % (DomainItem.name, DomainItem.IP))
                         print '%s with IP %s has been added to the database' % (DomainItem.name, DomainItem.IP)
+                        logging.debug('%s already exists in database' % (DomainItem.name))
         except IOError:
             print 'File not found, specify a valid file'
+            logging.error('File not found, please specify a valid file')
             sys.exit(1)
 
     def addToBlacklist(self, siteName, IP,  currentFile):
@@ -66,10 +73,12 @@ class IOitems(object):
                 with open(currentFile, 'a+') as fileData:
                     if siteName in dictList:
                         print '%s already exists in database' % (sitename)
+                        logging.debug('%s already exists in the database' % (sitename))
                     elif sitename not in dictList:
                         fileData.write('%s, %d \n' % (siteName, IP))
         except IOError:
             print 'File not found, specify a valid file'
+            logging.debug('%s already exists in database' % (sitename))
             sys.exit(1)
     
     def loadConfig(self, currentFile='config.ini'):
@@ -79,6 +88,7 @@ class IOitems(object):
             serverConfig = {}
             if not readfile.has_section('Run_Time'):
                 print 'File missing Run_Time section'
+                logging.debug('File missing Run_Time section')
             elif readfile.has_section('Run_Time'):
                 if readfile.has_option('Run_Time', 'DNSport'):
                     serverConfig['DNSport'] = readfile.get('Run_Time', 'DNSport')
@@ -102,6 +112,7 @@ class IOitems(object):
                     serverConfig['Name'] = readfile.get('Run_Time', 'Name')
             if not readfile.has_section('Domain'):
                 print 'File missing Domain section'
+                logging.debug('File missing Domain section')
             elif readfile.has_section('Domain'):
                 #load the params
                 if readfile.has_option('Run_Time', 'SiteName'):
@@ -116,7 +127,8 @@ class IOitems(object):
                     serverConfig['Admin'] = readfile.get('Domain', 'Admin')
             return serverConfig
         except IOError:
-            print 'File not found, specify a valid file'
+            print 'File not found, please specify a valid file'
+            logging.debug('File not found, please specify a valid file')
             sys.exit(1)
 
     def writeToConfig(self, currentFile=None, DNSport=None, whiteFile=None, blackFile=None, http_port=None, https_port=None, vs_ports=None, certs=None, keys=None, handlers=None, name=None, domain=None):
@@ -125,6 +137,7 @@ class IOitems(object):
            config_file.read(currentFile)
            if config_file.has_section('Run_Time'):
                print 'Adding items'
+               logging.debug('Adding items')
                if DNSport is not None:
                    config_file.set('Run_Time', 'DNSport', DNSport)
                if whiteFile is not None:
@@ -149,6 +162,7 @@ class IOitems(object):
            elif not config_file.has_section('Run_Time'):
                #create config section
                print 'Adding section and items'
+               logging.debug('Adding section and items')
                config_file.add_section('Run_Time')
                if DNSport is not None:
                    config_file.set('Run_Time', 'DNSport', DNSport)
@@ -186,10 +200,12 @@ class IOitems(object):
                    config_file.set('Domain', 'Port', domain.port)
                    config_file.set('Domain', 'Admin', domain.admin)
            print 'Writing to file: %s' % (currentFile)
+           logging.debug('Writing to file: %s' % (currentFile))
            with open(currentFile, 'w') as configfile:
                config_file.write(configfile)
         except IOError:
             print 'File not found, specify a valid file'
+            logging.debug('File not found, please specify a valid file')
             sys.exit(1)
 
     def set_DNSport(self, port):
@@ -222,62 +238,74 @@ class IOitems(object):
             servers += 8000
             return servers
         else:
-            return free_ports.pop()
+            return Model.HTTPShandler.port[0] 
 
     def addFreePorts(self, free_ports, free_port=None):
         free_ports.append(free_port)
 
-    def startServers(self):
+    def make_VS(self, server_list, server_total, port, serverRequest, permissions):
+        tool = Util.Util() 
+        handler = Model.HandlerFactory()
+        server_list.append('VS%d' % (server_total))
+        server_list[server_total] = Model.VS_host(port, tool.get_path(permissions[0]),
+                             tool.get_path(permissions[1]), handler.factory(serverRequest),
+                             server_list[server_total])
+        server_list[server_total].daemon = True
+        server_list[server_total].start()
+        handler.set_port(port)
+
+    def startServers(self, virtual_servers, sites_up, free_ports):
         #Port for either services will be set at launch on terminal or config file
         # run the DNS services
-        tool = Util.Util()
         
         #Initialize and run DNS, HTTP and HTTPS
         self.setPorts()
         serverList = Model.Server()
-        DNS_server = serverList.factory('DNS', self.port)
+        DNS_server = serverList.factory('DNS', int(self.port))
         DNS_server.daemon = True
         DNS_server.start()
 
-        http_server = serverList.factory('HTTP', self.http_port)
-        http_server.daemon = True
-        http_server.start()
+        test = sockDev.TestServer(int(self.http_port))
+        test.daemon = True
+        test.start()
 
+#        http_server = serverList.factory('HTTP', self.http_port)
+#        http_server.daemon = True
+#        http_server.start()
+        
+        
         #initialize and run HTTPS services
-        https_server = serverList.factory('HTTPS', self.https_port)
-        https_server.daemon = True
-        https_server.start()
+#        https_server = serverList.factory('HTTPS', self.https_port)
+#        https_server.daemon = True
+#        https_server.start()
+
+#        SNI_server = serverList.factory('SNI', self.https_port)
+#        SNI_server.daemon = True
+#        SNI_server.start()
         
         #Move these items to the config file
         certs = [#'/ubuntu1404/./server.key',
-                 '/certs/./test1cert.pem',
-                 '/certs/./test2cert.pem',
+                 '/certs/./www.cnn.com.cert',
+                 '/certs/./www.foo.com.cert',
                  '/certs/./test3cert.pem']
 
         keys = [# '/ubuntu1404/./server.crt',
-                 '/certs/./test1key.pem',
-                 '/certs/./test2key.pem',
+                 '/certs/./www.cnn.com.key',
+                 '/certs/./www.foo.com.key',
                  '/certs/./test3key.pem']
-        ports = [#443, 
-                 8000, 8001, 8002]
-        VS_servers = []
 
-        free_ports = [] #Used to keep track of free ports
+        permissions = [certs[0], keys[0]]
+        logging.debug('Permissions \n Cert: %s \n Key: %s ' % (permissions[0], permissions[1]))
 
         serverNames = ['nginx', 'IIS', 'Apache', 'gws', 'lighttpd'] #This list will be replaced by header requests
-        handler = Model.HandlerFactory()
-        #Spawn VS on page request instead of creating static servers
+#        sites_up[hostname] = server_name
+#        self.make_VS(virtual_servers, 0, self.availablePorts(free_ports, 0), serverNames[3], permissions)
+#        test = serverList.factory('TestHTTPS', 8000)
+#        test.daemon = True
+#        test.start()
         #create method for get_cert that matches host request
-        #get server handler request type from HTTPS handler
-        
-        for number in range(len(keys)):
-            VS_servers.append('VS%d' % (number))
-            VS_servers[number] = Model.VS_host(self.availablePorts(free_ports, number), tool.get_path(certs[number]),
-                                 tool.get_path(keys[number]), handler.factory(serverNames[number]),
-                                 name= VS_servers[number])
-            VS_servers[number].daemon = True
-            VS_servers[number].start()
-
+         
+        #Test
 #        sites = Model.HTTPShandler.pathways['cnn.com']
 #        print 'Sites: ', sites
 #        sites = sites[:-1] + '9'
@@ -290,25 +318,25 @@ class Controller(IOitems):
     #lists. If the address is not found then it is forwarded to an external DNS to resolve. Forwarded
     #requests send the raw query data and receive raw data.
     def dns_response(self, data):
-        log = View.View()
         request = DNSRecord.parse(data)
         print 'Searching: \n %s' % (str(request))
+        logging.debug('Searching: \n %s' % (str(request)))
         reply = DNSRecord(DNSHeader(id=request.header.id, qr=1, aa=1, ra=1), q=request.q)
-        qn = request.q.qname
-        strQuery = repr(qn)                            #remove class formatting
-        strQuery = strQuery[12:-2]                     #DNSLabel type, strip class and take out string  
+        query_name = request.q.qname                     #is preserved so that we can reply with proper formatting later
+        str_query = repr(query_name)                     #remove class formatting
+        str_query = str_query[12:-2]                     #DNSLabel type, strip class and take out string  
 
-        temp = Model.setLists(self)
-        domainList = self.loadFile(temp[0])
+        list_names = Model.setLists(self)
+        domainList = self.loadFile(list_names[0])
         domainDict = dict(domainList)
-        blackList = self.loadFile(temp[1])
+        blackList = self.loadFile(list_names[1])
         blackDictionary = dict(blackList)
-        address = urlparse.urlparse(strQuery)
-        if blackDictionary.get(strQuery):             
-            reply.add_answer(RR(rname=qn, rtype=1, rclass=1, ttl=300, rdata=A('127.0.0.1')))
+        address = urlparse.urlparse(str_query)
+        if blackDictionary.get(str_query):             
+            reply.add_answer(RR(rname=query_name, rtype=1, rclass=1, ttl=300, rdata=A('127.0.0.1')))
         else:
-            if domainDict.get(strQuery):
-                reply.add_answer(RR(rname=qn, rtype=1, rclass=1, ttl=300, rdata=A(domainDict[strQuery])))
+            if domainDict.get(str_query):
+                reply.add_answer(RR(rname=query_name, rtype=1, rclass=1, ttl=300, rdata=A(domainDict[str_query])))
             else:
                 try:
                     realDNS = socket.socket( socket.AF_INET, socket.SOCK_DGRAM)
@@ -317,16 +345,20 @@ class Controller(IOitems):
                     realDNS.close()
                     readableAnswer = DNSRecord.parse(answerData) 
                     print'--------- Reply:\n %s' % (str(readableAnswer))
+                    logging.debug('DNS Reply: \n %s' % (str(readableAnswer)))
                     return answerData 
                 except socket.gaierror: 
                     print '-------------NOT A VALID ADDRESS--------------'
+                    logging.error('Not a valid address %s' % (str_query))
  
         print '--------- Reply:\n %s' % (str(reply))
+        logging.debug('DNS Reply: \n %s' % (str(reply)))
         return reply.pack()   # replies with an empty pack if address is not found
     
 
     def printThreads(self, currentThread, tnum):
         print 'Current thread: %s \n Current threads alive: %d' % (str(currentThread), tnum)
+        logging.debug('Current thread: %s \n Current threads alive: %d' % (str(currentThread), tnum))
 
 
     class BaseRequestHandler(SocketServer.BaseRequestHandler):
@@ -340,10 +372,12 @@ class Controller(IOitems):
         def handle(self):
             now = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')
             print '\n\n%s request %s (%s %s):' % (self.__class__.__name__[:3], now, self.client_address[0], self.client_address[1])
-
+            logging.debug('\n\n%s request %s (%s %s):' % (self.__class__.__name__[:3], now, self.client_address[0], self.client_address[1]))
+            
             try:
                 data = self.get_data()
                 print len(data), data.encode('hex')
+                logging.debug('Length: %d %s' % (len(data), data.encode('hex')))
                 self.send_data(Controller().dns_response(data))
             except Exception:
                 traceback.print_exc(file=sys.stderr)
