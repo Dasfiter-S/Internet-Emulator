@@ -1,3 +1,7 @@
+#Internet Emulator V2.1
+-----------------------------------------
+Included sockDev.py which contains a socket server built entirely from the socket library. It is currently being used to construct an HTTP handler and server from the most basic structures.
+
 #Internet Emulator V2
 -----------------------------------------
 HTTPS sites will be served from the port 443 exclusively. Virtual Hosting is already supported for HTTP on port 80. Deleted most of the Virtual Server code for HTTPS and also removed most of the code that is no longer relevant to maintaining a multiport/server stucture for HTTPS
