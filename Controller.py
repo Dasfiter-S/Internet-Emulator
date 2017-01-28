@@ -254,7 +254,7 @@ class IOitems(object):
         server_list[server_total].start()
         handler.set_port(port)
 
-    def startServers(self, virtual_servers, sites_up, free_ports):
+    def startServers(self):
         #Port for either services will be set at launch on terminal or config file
         # run the DNS services
         
@@ -265,7 +265,7 @@ class IOitems(object):
         DNS_server.daemon = True
         DNS_server.start()
 
-        test = sockDev.TestServer(int(self.http_port))
+        test = sockDev.TestServer(int(self.https_port))
         test.daemon = True
         test.start()
 
@@ -319,7 +319,7 @@ class Controller(IOitems):
     #requests send the raw query data and receive raw data.
     def dns_response(self, data):
         request = DNSRecord.parse(data)
-        print 'Searching: \n %s' % (str(request))
+#        print 'Searching: \n %s' % (str(request))
         logging.debug('Searching: \n %s' % (str(request)))
         reply = DNSRecord(DNSHeader(id=request.header.id, qr=1, aa=1, ra=1), q=request.q)
         query_name = request.q.qname                     #is preserved so that we can reply with proper formatting later
@@ -344,14 +344,14 @@ class Controller(IOitems):
                     answerData, fromaddr = realDNS.recvfrom(1024)
                     realDNS.close()
                     readableAnswer = DNSRecord.parse(answerData) 
-                    print'--------- Reply:\n %s' % (str(readableAnswer))
+#                    print'--------- Reply:\n %s' % (str(readableAnswer))
                     logging.debug('DNS Reply: \n %s' % (str(readableAnswer)))
                     return answerData 
                 except socket.gaierror: 
                     print '-------------NOT A VALID ADDRESS--------------'
                     logging.error('Not a valid address %s' % (str_query))
  
-        print '--------- Reply:\n %s' % (str(reply))
+#        print '--------- Reply:\n %s' % (str(reply))
         logging.debug('DNS Reply: \n %s' % (str(reply)))
         return reply.pack()   # replies with an empty pack if address is not found
     
@@ -371,7 +371,7 @@ class Controller(IOitems):
 
         def handle(self):
             now = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')
-            print '\n\n%s request %s (%s %s):' % (self.__class__.__name__[:3], now, self.client_address[0], self.client_address[1])
+#            print '\n\n%s request %s (%s %s):' % (self.__class__.__name__[:3], now, self.client_address[0], self.client_address[1])
             logging.debug('\n\n%s request %s (%s %s):' % (self.__class__.__name__[:3], now, self.client_address[0], self.client_address[1]))
             
             try:

@@ -26,7 +26,6 @@ def launchOptions(mainObj):
         for value in vars(arg):
             if getattr(arg, value) == None:
                 null_choices += 1
-        print 'Null choices %d vs argSize %d' % (null_choices, arg_size)
         if arg.readfile is not None and null_choices < arg_size:
             print 'Saving to new config file'
             mainObj.writeToConfig(arg.readfile, str(arg.dns_port), arg.whiteFile, arg.blackFile, str(arg.http_port), str(arg.https_port))
@@ -48,10 +47,7 @@ if __name__ == '__main__':
     mainItem = IOitems()
     launchOptions(mainItem)
     Model.setLists(mainItem)
-    virtual_servers = []
-    sites_up = {}
-    free_ports = []
-    mainItem.startServers(virtual_servers, sites_up, free_ports)
+    mainItem.startServers()
     try:
         while(keepRunning()):
            time.sleep(1)
@@ -62,6 +58,3 @@ if __name__ == '__main__':
         sys.exit(1)
 
 #move config.ini to main
-#ping the servers for time out and check if it exists if not continue
-#server_is_up for pinging
-#timeout for ping in config.ini

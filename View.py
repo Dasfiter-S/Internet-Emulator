@@ -28,21 +28,20 @@ class BaseHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     #host_head is used for http virtual hosting. If a blacklisted request is redirected to 127.0.0.1 then it is
     #resolved here and displayed while staying on port 80. Example cnn.com or foo.com
     def serve_page(self):
+        location = ''
         logging.debug('Serving GET request')
         host = self.headers.get('Host')
         logging.debug('Current host: %s' % (host))
         logging.debug('Headers: %s' % (self.headers))
         tool = Util.Util()
-        if not tool.valid_addr(host): #filter out IP address that cannot be parsed as localhost file paths
-            if ':' in host:
-                host = host.split(':')[0]
+        #filter out IP address that cannot be parsed as localhost file paths
+        if not tool.valid_addr(host): 
             if 'http://' in host:
                 host = host.split('http://')[1]
             subString = re.search('\Awww', host)
             if subString is not None:
                 if 'www'  not in subString.group(0):
                     host = 'www.%s' % (host)
-#Pass the host       
             hostPath = re.sub('\.', '/', host)
             if os.path.isdir(hostPath):
                 for index in 'index.html', 'index.htm':
