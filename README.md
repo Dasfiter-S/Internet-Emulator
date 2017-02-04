@@ -1,6 +1,11 @@
+#Internet Emulator V3.0
+-----------------------------------------
+HTTPS, HTTP and DNS are all working. SNI is now completely supported for blacklist sites whose certificates are supplied to the server.
+
 #Internet Emulator V2.2
 -----------------------------------------
 HTTPS now working for the socket based server. Still working on servering multiple certificates per port.
+
 #Internet Emulator V2.1
 -----------------------------------------
 Included sockDev.py which contains a socket server built entirely from the socket library. It is currently being used to construct an HTTP handler and server from the most basic structures.
