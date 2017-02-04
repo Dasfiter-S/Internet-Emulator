@@ -265,53 +265,22 @@ class IOitems(object):
         DNS_server.daemon = True
         DNS_server.start()
 
-        test = sockDev.TestServer(int(self.https_port))
-        test.daemon = True
-        test.start()
+#        test = sockDev.TestServer(int(self.https_port))
+#       test.daemon = True
+#        test.start()
 
-#        http_server = serverList.factory('HTTP', self.http_port)
-#        http_server.daemon = True
-#        http_server.start()
+        http_server = serverList.factory('HTTP', self.http_port)
+        http_server.daemon = True
+        http_server.start()
         
         
         #initialize and run HTTPS services
-#        https_server = serverList.factory('HTTPS', self.https_port)
-#        https_server.daemon = True
-#        https_server.start()
-
-#        SNI_server = serverList.factory('SNI', self.https_port)
-#        SNI_server.daemon = True
-#        SNI_server.start()
+        https_server = serverList.factory('HTTPS', self.https_port)
+        https_server.daemon = True
+        https_server.start()
         
         #Move these items to the config file
-        certs = [#'/ubuntu1404/./server.key',
-                 '/certs/./www.cnn.com.cert',
-                 '/certs/./www.foo.com.cert',
-                 '/certs/./test3cert.pem']
-
-        keys = [# '/ubuntu1404/./server.crt',
-                 '/certs/./www.cnn.com.key',
-                 '/certs/./www.foo.com.key',
-                 '/certs/./test3key.pem']
-
-        permissions = [certs[0], keys[0]]
-        logging.debug('Permissions \n Cert: %s \n Key: %s ' % (permissions[0], permissions[1]))
-
-        serverNames = ['nginx', 'IIS', 'Apache', 'gws', 'lighttpd'] #This list will be replaced by header requests
-#        sites_up[hostname] = server_name
-#        self.make_VS(virtual_servers, 0, self.availablePorts(free_ports, 0), serverNames[3], permissions)
-#        test = serverList.factory('TestHTTPS', 8000)
-#        test.daemon = True
-#        test.start()
-        #create method for get_cert that matches host request
          
-        #Test
-#        sites = Model.HTTPShandler.pathways['cnn.com']
-#        print 'Sites: ', sites
-#        sites = sites[:-1] + '9'
-#        print 'Sites: ', sites
-       
-
 class Controller(IOitems):
 
     #Receives the raw DNS query data and extracts the name of the address. Checks the address agaisnt specified
@@ -343,15 +312,15 @@ class Controller(IOitems):
                     realDNS.sendto(data,('8.8.8.8', 53))
                     answerData, fromaddr = realDNS.recvfrom(1024)
                     realDNS.close()
-                    readableAnswer = DNSRecord.parse(answerData) 
-#                    print'--------- Reply:\n %s' % (str(readableAnswer))
+                    readableAnswer = DNSRecord.parse(answerData)
+                    print'--------- Reply:\n %s' % (str(readableAnswer))
                     logging.debug('DNS Reply: \n %s' % (str(readableAnswer)))
                     return answerData 
                 except socket.gaierror: 
                     print '-------------NOT A VALID ADDRESS--------------'
                     logging.error('Not a valid address %s' % (str_query))
  
-#        print '--------- Reply:\n %s' % (str(reply))
+        print '--------- Reply:\n %s' % (str(reply))
         logging.debug('DNS Reply: \n %s' % (str(reply)))
         return reply.pack()   # replies with an empty pack if address is not found
     
@@ -371,7 +340,7 @@ class Controller(IOitems):
 
         def handle(self):
             now = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')
-#            print '\n\n%s request %s (%s %s):' % (self.__class__.__name__[:3], now, self.client_address[0], self.client_address[1])
+            print '\n\n%s request %s (%s %s):' % (self.__class__.__name__[:3], now, self.client_address[0], self.client_address[1])
             logging.debug('\n\n%s request %s (%s %s):' % (self.__class__.__name__[:3], now, self.client_address[0], self.client_address[1]))
             
             try:

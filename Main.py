@@ -39,6 +39,7 @@ def keepRunning():
         running = True
     except KeyboardInterrupt:
         running = False
+        raise KeyboardInterrupt
 
     return running
 
@@ -54,6 +55,7 @@ if __name__ == '__main__':
            sys.stderr.flush()
            sys.stdout.flush()
     except KeyboardInterrupt:
+        raise KeyboardInterrupt
         logging.debug('Terminated via SIGINT')
         sys.exit(1)
 

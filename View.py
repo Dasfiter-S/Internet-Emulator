@@ -19,12 +19,6 @@ class BaseHandler(BaseHTTPServer.BaseHTTPRequestHandler):
     def do_GET(self):
         self.serve_page()
     
-    def __SSL(self):
-        test
-        
-    def __pick_certificate(self, host):
-        host
-
     #host_head is used for http virtual hosting. If a blacklisted request is redirected to 127.0.0.1 then it is
     #resolved here and displayed while staying on port 80. Example cnn.com or foo.com
     def serve_page(self):
@@ -69,34 +63,76 @@ class BaseHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             self.send_error(404, 'The address %s was not found' % (host))
 
 
-class HTTPShandler(BaseHandler):
-
-    #These lists will be moved to a file
-
-    pathways = {'cnn.com': 'https://www.cnn.com:8000',
-                    'www.cnn.com' : 'https://www.cnn.com:8000',
-                    'foo.com' : 'https://www.foo.com:8001',
-                    'www.foo.com' : 'https://www.foo.com:8001',
-                  }
-    port = []
-    page_get_fail = 'http://www.google.com'
-    
-    #Overrides the base handler serve_page()
-    def serve_page(self): 
-        host = self.headers.get('Host')
-#        print 'Headers: %s' % (self.headers)
-        self.send_response(301)
-        self.send_header('Location', 'https://%s:%s' % (host, '8000'))#self.port[0]))
-        self.end_headers()
-
 class NginxServerHandler(BaseHandler):
     server_version = 'nginx'
 
 class ApacheServerHandler(BaseHandler):
-    server_version = 'Apache'
+    server_versioa = ''
 
 class GwsServerHandler(BaseHandler):
     server_version = 'gws'
 
 class IISServerHandler(BaseHandler):
     server_version = 'IIS'
+
+class HTTPShandler(object):
+    def __init__(self, str_request, client_connection, host_name, server_type='Test cat'):
+        self.request = str_request
+        self.connection = client_connection
+        self.host = host_name
+        self.server = server_type
+
+    def __generateHeaders(self, code):
+        header = ''
+        if code is 200:
+            header = 'HTTP/1.1 %d OK\n' % (code)
+        elif code is 404:
+            header = 'HTTP/1.1 %d Not Found\n' % (code)
+        current_date = time.strftime('%a, %d %b %Y %H:%M:%S', time.localtime())
+        header += 'Date: %s\n' % (current_date)
+        header += 'Server: %s\n' % (self.server)
+        header += 'Connection: closed\n\n'
+        return header
+
+    def handler(self):
+        response_content = ''
+        request_method = self.request.split(' ')[0]
+        if (request_method == 'GET') or (request_method == 'HEAD'):
+            file_requested = self.request.split(' ')
+            file_requested = file_requested[1]
+            print 'Request type: %s' % (request_method)
+            if file_requested == '/':
+                print 'Current host', host
+                subString = re.search('\Awww', self.host)
+                print 'Current substring', subString
+                if subString is not None:
+                    if 'www' not in subString.group(0):
+                        self.host = 'www.%s' % (self.host)
+                hostPath = re.sub('\.', '/', self.host)
+                if os.path.isdir(hostPath):
+                    print 'Finding index'
+                    for index in 'index.html', 'index.htm':
+                        index = os.path.join(hostPath, index)
+                        if os.path.exists(index):
+                            location = index
+                            break
+                try:
+                    print 'Loading index'
+                    print location
+                    location = re.sub('/index', '/./index', location)
+                    with open(location, 'rb') as file_handler:
+                        if (request_method == 'GET'):
+                            print 'Fetching index to serve'
+                            response_content = file_handler.read()
+                    print 'Sending response 200'
+                    response_headers = self.__generateHeaders(200)
+                except Exception as e:
+                    print 'File not found'
+                    response_headers = self.__generateHeaders(404)
+
+                server_response = response_headers.encode()
+                if request_method == 'GET':
+                    print 'Serving html response with content'
+                    server_response += response_content
+                self.connection.sendall(server_response)
+
