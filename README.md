@@ -14,7 +14,7 @@ Usage:
     
     sudo python Main.py
     
-    The program will load the following default values: Config.ini for the config files, blacklist.txt for the blacklist, dnsCache.txt for the whitelist, port 53 for the DNS server, port 80 for HTTP, port 443 for HTTPS. You can directly edit the config file to change the load values. The program also supports command line options to specify the following:
+The program will load the following default values: Config.ini for the config files, blacklist.txt for the blacklist, dnsCache.txt for the whitelist, port 53 for the DNS server, port 80 for HTTP, port 443 for HTTPS. You can directly edit the config file to change the load values. The program also supports command line options to specify the following:
     
     sudo python Main.py [option]
     
