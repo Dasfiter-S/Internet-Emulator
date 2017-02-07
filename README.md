@@ -16,11 +16,22 @@ Usage:
     
     The program will load the following default values: Config.ini for the config files, blacklist.txt for the blacklist, dnsCashe.txt for the whitelist, port 53 for the DNS server, port 80 for HTTP, port 443 for HTTPS. You can directly edit the config file to change the load values. The program also supports command line options to specify the following:
     
-    '-dp' or '--dns_port' 
-    '-wf' or '--whiteFile'
-    '-bf' or '--blackFile'
-    '-hp' or '--http_port'
-    '-s' or '--save_option'
-    '-hsp' or '--https_port'
-    '-cf' or '--readfile'
-
+    sudo python Main.py [option]
+    
+    [options]:
+    '-dp' or '--dns_port' select the dns port, defaults to 53
+    '-wf' or '--whiteFile' specify the whitefile, defaults to dnsCache.txt
+    '-bf' or '--blackFile' name the blackfile to use, defaults to blacklist.txt 
+    '-hp' or '--http_port' select the port to run the http server on, defaults to 80
+    '-s' or '--save_option' save options or run without saving options(strongly recommended to use save). Defaults to false
+    '-hsp' or '--https_port' select the port to run the https server on, defaults to port 443
+    '-cf' or '--readfile' choose the config file to use for loading, defaults to config.ini if file is not specified
+    
+    Example usage:
+    
+    sudo python Main.py -s -dp 8000 -hp 8001 -hsp 8002
+                  set save, dns port 8000, http port, 8001, https port 8002
+    sudo python Main.py 
+                  set no save, load all defaults from Config.ini
+    sudo python Main.py -s
+                  set save, gets ignored since no values were chosen
