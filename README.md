@@ -53,11 +53,14 @@ Troubleshooting:
 Always make sure that Config.ini has values when loading. While there are some safeguards, it is still recommended to not leave the config file blank.
 
 Port in use error:
+
 If you receive the error [48] socket in use, wait a few minutes before lanching the script again. Also close down any browser tabs you might have open that were loading queries from the script servers.
 
 Root access error:
+
 You will need root access to run the script at the default ports 53, 80, and 443. If you are not authorized for root access then changing the ports to anything above the first 1024 ports will fix that issue. If you switch to any port number besides the standard your browser queries might look like this: http://www.test.com:[port number goes here] or http://www.test.com:5000 same thing goes for HTTPS. https://wwww.test.com:[enter your port here]
 
 DNS server not redirecting to local index file:
+
 Make sure that the DNS server is set at the primary and only DNS server. Also check to make sure that the address you typed in is the desired some such as the difference between http://not.right.com and https://not.right.com. As far as the servers serving the index pages are concerned these are two completely different pages on two completely different servers.
 
