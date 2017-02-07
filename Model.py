@@ -10,13 +10,10 @@ import BaseHTTPServer
 import urllib
 import posixpath
 import ssl
-import StringIO
 import logging
 import Util
-
 import re
 import OpenSSL
-
 from dnslib import *
 from multiprocessing.dummy import Pool as ThreadPool
 from OpenSSL.crypto import FILETYPE_PEM, load_privatekey, load_certificate
@@ -103,20 +100,27 @@ class HTTPSServer(BaseServer):
             server_ssl.set_context(new_context)
             print server_ssl.get_state_string()
             print 'Processing data after accept'
-            self.handler(data_in, connstream, host)
+            #passing data to the handler
+            virtual_handler = HandlerFactory()
+            handler = virtual_handler.https_factory()
+            https_handler = handler(data_in, connstream, host)
+            https_handler.handler()
+
             connstream.shutdown(socket.SHUT_RDWR)
             connstream.close()
 
     def processHost(self, data_in):
         host = re.search('(?<=Host: ).*', data_in)
         if host is not None:
-           host = host.group()
-           host = host.rstrip()
-           if 'www' not in host:
-               host = 'www.%s' % (host)
-           return host
+            host = host.group()
+            host = host.rstrip()
+            #This part can be removed if the pre-append of www is not needed keep in
+            #mind that the file path to load the index file is determined by the link.
+            sub_string = re.search('\Awww', host)
+            if sub_string is None:
+                host = 'www.%s' % (host)
+            return host
 
-#--------------Move to model
     def __loadKey(self, path, tool):
         with open(tool.get_path(path), 'rb') as key:
             return OpenSSL.crypto.load_privatekey(OpenSSL.SSL.FILETYPE_PEM, key.read())
@@ -124,62 +128,6 @@ class HTTPSServer(BaseServer):
     def __loadCert(self, path, tool):
         with open(tool.get_path(path), 'rb') as cert:
             return OpenSSL.crypto.load_certificate(OpenSSL.SSL.FILETYPE_PEM, cert.read())
-#---------------------------------
-
-    #Fully custom non-inherited handler for webpages    
-    def __generateHeaders(self, code, server_type='Test Cat'):
-        header = ''
-        if code is 200:
-            header = 'HTTP/1.1 %d OK\n' % (code)
-        elif code is 404:
-            header = 'HTTP/1.1 %d Not Found\n' % (code)
-        current_date = time.strftime('%a, %d %b %Y %H:%M:%S', time.localtime())
-        header += 'Date: %s\n' % (current_date)
-        header += 'Server: %s\n' % (server_type)
-        header += 'Connection: closed\n\n'
-        return header
-
-    def handler(self, str_raw_request, connection, host):
-        response_content = ''
-        request_method = str_raw_request.split(' ')[0]
-        if (request_method == 'GET') or (request_method == 'HEAD'):
-            file_requested = str_raw_request.split(' ')
-            file_requested = file_requested[1]
-            print 'Request type: %s' % (request_method)
-            if file_requested == '/':
-                print 'Current host', host
-                subString = re.search('\Awww', host)
-                print 'Current substring', subString
-                if subString is not None:
-                    if 'www' not in subString.group(0):
-                        host = 'www.%s' % (host)
-                hostPath = re.sub('\.', '/', host)
-                if os.path.isdir(hostPath):
-                    print 'Finding index'
-                    for index in 'index.html', 'index.htm':
-                        index = os.path.join(hostPath, index)
-                        if os.path.exists(index):
-                            location = index
-                            break
-                try:
-                    print 'Loading index'
-                    print location
-                    location = re.sub('/index', '/./index', location)
-                    with open(location, 'rb') as file_handler:
-                        if (request_method == 'GET'):
-                            print 'Fetching index to serve'
-                            response_content = file_handler.read()
-                    print 'Sending response 200'
-                    response_headers = self.__generateHeaders(200)
-                except Exception as e:
-                    print 'File not found'
-                    response_headers = self.__generateHeaders(404)
-
-                server_response = response_headers.encode()
-                if request_method == 'GET':
-                    print 'Serving html response with content'
-                    server_response += response_content
-                connection.sendall(server_response)
 
 class EasyHTTPSServer(BaseServer):
     def run(self):
@@ -205,10 +153,7 @@ class HandlerFactory(object):
             print '%s type of handler not found.' % (name)
 
     def https_factory(self):
-        if name == 'HTTPS': return View.HTTPSHandler
-        else:
-            logging.debug('%s type of handler not found.' % (name))
-            print '%s type of handler not found.' % (name)
+        return View.HTTPShandler
 
 def setLists(self):
     items = self.loadConfig()

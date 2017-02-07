@@ -6,6 +6,7 @@ import logging
 import Util
 import re
 import os
+import time
 
    
     #Pass View instance to other files, so they can share the same logger
@@ -32,9 +33,9 @@ class BaseHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         if not tool.valid_addr(host): 
             if 'http://' in host:
                 host = host.split('http://')[1]
-            subString = re.search('\Awww', host)
-            if subString is not None:
-                if 'www'  not in subString.group(0):
+            sub_string = re.search('\Awww', host)
+            if sub_string is not None:
+                if 'www'  not in sub_string.group(0):
                     host = 'www.%s' % (host)
             hostPath = re.sub('\.', '/', host)
             if os.path.isdir(hostPath):
@@ -102,7 +103,7 @@ class HTTPShandler(object):
             file_requested = file_requested[1]
             print 'Request type: %s' % (request_method)
             if file_requested == '/':
-                print 'Current host', host
+                print 'Current host', self.host
                 subString = re.search('\Awww', self.host)
                 print 'Current substring', subString
                 if subString is not None:

@@ -265,10 +265,6 @@ class IOitems(object):
         DNS_server.daemon = True
         DNS_server.start()
 
-#        test = sockDev.TestServer(int(self.https_port))
-#       test.daemon = True
-#        test.start()
-
         http_server = serverList.factory('HTTP', self.http_port)
         http_server.daemon = True
         http_server.start()
@@ -313,14 +309,14 @@ class Controller(IOitems):
                     answerData, fromaddr = realDNS.recvfrom(1024)
                     realDNS.close()
                     readableAnswer = DNSRecord.parse(answerData)
-                    print'--------- Reply:\n %s' % (str(readableAnswer))
+#                    print'--------- Reply:\n %s' % (str(readableAnswer))
                     logging.debug('DNS Reply: \n %s' % (str(readableAnswer)))
                     return answerData 
                 except socket.gaierror: 
-                    print '-------------NOT A VALID ADDRESS--------------'
+#                    print '-------------NOT A VALID ADDRESS--------------'
                     logging.error('Not a valid address %s' % (str_query))
  
-        print '--------- Reply:\n %s' % (str(reply))
+#        print '--------- Reply:\n %s' % (str(reply))
         logging.debug('DNS Reply: \n %s' % (str(reply)))
         return reply.pack()   # replies with an empty pack if address is not found
     
@@ -340,7 +336,7 @@ class Controller(IOitems):
 
         def handle(self):
             now = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')
-            print '\n\n%s request %s (%s %s):' % (self.__class__.__name__[:3], now, self.client_address[0], self.client_address[1])
+#            print '\n\n%s request %s (%s %s):' % (self.__class__.__name__[:3], now, self.client_address[0], self.client_address[1])
             logging.debug('\n\n%s request %s (%s %s):' % (self.__class__.__name__[:3], now, self.client_address[0], self.client_address[1]))
             
             try:
