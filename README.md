@@ -72,5 +72,6 @@ Make sure that the DNS server is set at the primary and only DNS server. Also ch
 Blacklist.txt warning:
 
 Blacklist.txt is passed to the DNS server as a touple. This allows for faster reading. If you edit the blacklist please add a domain and an IP seperated by a comma. Example:
+
       1 www.cnn.com., 127.0.0.1
       2 www.foo.com., 127.0.0.1
