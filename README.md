@@ -20,9 +20,14 @@ How to use:
     
     sudo python Main.py
     
-    [options]:
+ At first your script might not redirect any websites since you will have to add websites to the blacklist. You also have access to a whitelist for more control. The whitelist could be a redirect list or whatever you wish to make of it. The evaluation is as follows:
+    Check Black list first
+    Check White list
+    If site query is not on either lists then access google DNS and obtain the IP.
     
 The program will load the following default values: Config.ini for the config files, blacklist.txt for the blacklist, dnsCache.txt for the whitelist, port 53 for the DNS server, port 80 for HTTP, port 443 for HTTPS. You can directly edit the config file to change the load values. The program also supports command line options to specify the following:
+ 
+    [options]:
     
     sudo python Main.py [option]
     '-dp' or '--dns_port' select the dns port, defaults to 53
@@ -64,3 +69,8 @@ DNS server not redirecting to local index file:
 
 Make sure that the DNS server is set at the primary and only DNS server. Also check to make sure that the address you typed in is the desired some such as the difference between http://not.right.com and https://not.right.com. As far as the servers serving the index pages are concerned these are two completely different pages on two completely different servers.
 
+Blacklist.txt warning:
+
+Blacklist.txt is passed to the DNS server as a touple. This allows for faster reading. If you edit the blacklist please add a domain and an IP seperated by a comma. Example:
+      1 www.cnn.com., 127.0.0.1
+      2 www.foo.com., 127.0.0.1
