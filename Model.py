@@ -30,7 +30,7 @@ class Server(object):
         else:
             logging.debug('No such type %s' % (name))
             print 'No such type %s' % (name)
-
+#Virtual Class, only inherit from this class
 class BaseServer(threading.Thread):
     def __init__(self, port=None):
         threading.Thread.__init__(self)
@@ -38,7 +38,7 @@ class BaseServer(threading.Thread):
 
     def run(self):
         raise NotImplementedError
-
+#DNS only, server type
 class DNSServer(BaseServer):
     def run(self):
         try:
@@ -50,7 +50,7 @@ class DNSServer(BaseServer):
             raise KeyboardInterrupt
             DNS.shutdown()
             DNS.server_close()
-
+#HTTP server, c 
 class HTTPServer(BaseServer):
     def run(self):
         try:

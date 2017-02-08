@@ -87,7 +87,7 @@ class IOitems(object):
             readfile.read(currentFile)
             serverConfig = {}
             if not readfile.has_section('Run_Time'):
-                print 'File missing Run_Time section'
+                print 'File missing:\n --Run_Time section--'
                 logging.debug('File missing Run_Time section')
             elif readfile.has_section('Run_Time'):
                 if readfile.has_option('Run_Time', 'DNSport'):
@@ -111,8 +111,8 @@ class IOitems(object):
                 if readfile.has_option('Run_Time', 'Name'):
                     serverConfig['Name'] = readfile.get('Run_Time', 'Name')
             if not readfile.has_section('Domain'):
-                print 'File missing Domain section'
-                logging.debug('File missing Domain section')
+                print 'File missing:\n --Domain section--'
+                logging.debug('File missing: Domain section')
             elif readfile.has_section('Domain'):
                 #load the params
                 if readfile.has_option('Run_Time', 'SiteName'):
@@ -127,8 +127,8 @@ class IOitems(object):
                     serverConfig['Admin'] = readfile.get('Domain', 'Admin')
             return serverConfig
         except IOError:
-            print 'File not found, please specify a valid file'
-            logging.debug('File not found, please specify a valid file')
+            print 'File not found, please specify a valid file or verify the file name'
+            logging.debug('File not found, please specify a valid file or verify the file name')
             sys.exit(1)
 
     def writeToConfig(self, currentFile=None, DNSport=None, whiteFile=None, blackFile=None, http_port=None, https_port=None, vs_ports=None, certs=None, keys=None, handlers=None, name=None, domain=None):
@@ -161,7 +161,7 @@ class IOitems(object):
                    config_file.set('Run_Time', 'Name', name)
            elif not config_file.has_section('Run_Time'):
                #create config section
-               print 'Adding section and items'
+               print 'Adding section and items with specified values or defaults'
                logging.debug('Adding section and items')
                config_file.add_section('Run_Time')
                if DNSport is not None:
@@ -233,27 +233,6 @@ class IOitems(object):
              self.blacklist = inFile
              print 'BFin: %s' % inFile
 
-    def availablePorts(self, free_ports, servers=None):
-        if len(free_ports) == 0:
-            servers += 8000
-            return servers
-        else:
-            return Model.HTTPShandler.port[0] 
-
-    def addFreePorts(self, free_ports, free_port=None):
-        free_ports.append(free_port)
-
-    def make_VS(self, server_list, server_total, port, serverRequest, permissions):
-        tool = Util.Util() 
-        handler = Model.HandlerFactory()
-        server_list.append('VS%d' % (server_total))
-        server_list[server_total] = Model.VS_host(port, tool.get_path(permissions[0]),
-                             tool.get_path(permissions[1]), handler.factory(serverRequest),
-                             server_list[server_total])
-        server_list[server_total].daemon = True
-        server_list[server_total].start()
-        handler.set_port(port)
-
     def startServers(self):
         #Port for either services will be set at launch on terminal or config file
         # run the DNS services
@@ -291,17 +270,22 @@ class Controller(IOitems):
         str_query = repr(query_name)                     #remove class formatting
         str_query = str_query[12:-2]                     #DNSLabel type, strip class and take out string  
 
+        #Dictionary is loaded as such because of ease of access for the domain names
         list_names = Model.setLists(self)
         domainList = self.loadFile(list_names[0])
-        domainDict = dict(domainList)
+        domain_dict = dict(domainList)
         blackList = self.loadFile(list_names[1])
-        blackDictionary = dict(blackList)
+
+        #Keep the domain name and an IP address in the blacklist. This way you can change line 282 and instead of redirecting
+        #to address 127.0.0.1 for all blacklist addresses you can personally choose where to send each of those. Just copy
+        #rdata=A(black_dictionary[str_query]))) instead of the current rdata=A('217.0.0.1')))
+        black_dictionary = dict(blackList)
         address = urlparse.urlparse(str_query)
-        if blackDictionary.get(str_query):             
+        if black_dictionary.get(str_query):             
             reply.add_answer(RR(rname=query_name, rtype=1, rclass=1, ttl=300, rdata=A('127.0.0.1')))
         else:
-            if domainDict.get(str_query):
-                reply.add_answer(RR(rname=query_name, rtype=1, rclass=1, ttl=300, rdata=A(domainDict[str_query])))
+            if domain_dict.get(str_query):
+                reply.add_answer(RR(rname=query_name, rtype=1, rclass=1, ttl=300, rdata=A(domain_dict[str_query])))
             else:
                 try:
                     realDNS = socket.socket( socket.AF_INET, socket.SOCK_DGRAM)
@@ -346,6 +330,8 @@ class Controller(IOitems):
                 self.send_data(Controller().dns_response(data))
             except Exception:
                 traceback.print_exc(file=sys.stderr)
+            except KeyboardInterrupt:
+                sys.exit(1)
 
     class UDPRequestHandler(BaseRequestHandler, ):
 

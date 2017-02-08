@@ -7,7 +7,7 @@ import Util
 import re
 import os
 import time
-
+import json
    
     #Pass View instance to other files, so they can share the same logger
     
@@ -82,7 +82,7 @@ class HTTPShandler(object):
         self.connection = client_connection
         self.host = host_name
         self.server = server_type
-
+#------------------------------------------------Move to JSON file
     def __generateHeaders(self, code):
         header = ''
         if code is 200:
@@ -94,7 +94,7 @@ class HTTPShandler(object):
         header += 'Server: %s\n' % (self.server)
         header += 'Connection: closed\n\n'
         return header
-
+#-----------------------------------------------------------------
     def handler(self):
         response_content = ''
         request_method = self.request.split(' ')[0]
