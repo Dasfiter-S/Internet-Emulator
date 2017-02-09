@@ -2,7 +2,8 @@
 --------------------------------
 Contact info:
 Ricardo Carretero
-higgsbosonseeker@gmail.com
+
+@gmail.com
 in collaboration with Inho Choi and Eli Schetinsky.
 
 This is the first release of the Internet Emulator. This program is designed to filter DNS requests if set as the primary DNS. This script gives you the ability to filter the DNS queries from a blacklist that redirects all requests specified on the blacklist to the localhost(127.0.0.1). This program also contains an HTTP and HTTPS server with their respective self certified certificates. Written using Python 2.7.12_2.
@@ -11,6 +12,22 @@ The program was designed to capture web requests that need to be resolved locall
 
 The HTTP server is running on the standard http port 80. The HTTPS server is running on the standard HTTPS port 443. The HTTP server supports Virtual hosting by accessing several websites using a single HTTP server. The HTTPS server supports the HTTPS Virtual Hosting equivalent. It does this by checking the name of the host request and passing it to the server so it can load that certificate instead of the default certificate for the HTTPS server.
 
+Quick setup guide:
+
+    Edit blacklist.txt and enter the website you wish to block or redirect.
+    Open a terminal and navigate to the folder where you unpacked the script. Launch with the following:
+    
+    sudo python Main.py -s -dp 53 -hp 80 -hsp 443
+    
+    This will create the config.ini with the default values needed to run the program. Feel free to change them at launch or after if you know what you are doing.
+    
+    Make sure you set your DNS settings to point to the IP where your DNS server is hosted. If you are running it on your machine then you want your IP to be 127.0.0.1 or localhost.
+    
+    Ignore this part if you aren't running this on a virtual machine:
+    
+    If you are using a virtual machine and you want to use the default ports you are going to have to do some digging to get it working on linux. On OSX you can use the following guide:
+    http://www.dmuth.org/node/1404/web-development-port-80-and-443-vagrant
+    
 How to use:
 
     Known supported systems: Linux Ubuntu and OSX 
@@ -20,10 +37,14 @@ How to use:
     
     sudo python Main.py
     
- At first your script might not redirect any websites since you will have to add websites to the blacklist. You also have access to a whitelist for more control. The whitelist could be a redirect list or whatever you wish to make of it. The evaluation is as follows:
+ At first your script might not redirect any websites since you will have to add websites to the blacklist. The blacklist is simply a file in the folder called blacklist.txt. You also have access to a whitelist for more control which is also just a whitelist.txt file. The whitelist could be a redirect list or whatever you wish to make of it. The evaluation is as follows:
+ 
     Check Black list first
-    Check White list
-    If site query is not on either lists then access google DNS and obtain the IP.
+    Check White list second
+    If site query is not on either lists then access google DNS and obtain the info.
+    
+    Note: 
+    Currently only forward DNS is supported for the white and blacklists. Right now any reverse DNS lookups are forwarded.
     
 The program will load the following default values: Config.ini for the config files, blacklist.txt for the blacklist, dnsCache.txt for the whitelist, port 53 for the DNS server, port 80 for HTTP, port 443 for HTTPS. You can directly edit the config file to change the load values. The program also supports command line options to specify the following:
  
