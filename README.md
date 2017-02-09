@@ -25,7 +25,9 @@ Quick setup guide:
     
     Ignore this part if you aren't running this on a virtual machine:
     
-    If you are using a virtual machine and you want to use the default ports you are going to have to do some digging to get it working on linux. On OSX you can use the following guide:
+    If you are using a virtual machine and you want to use the default ports you are going to have to do some digging
+    to get it working on linux. On OSX you can use the following guide:
+    
     http://www.dmuth.org/node/1404/web-development-port-80-and-443-vagrant
     
 How to use:
