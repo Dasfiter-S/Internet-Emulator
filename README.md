@@ -1,9 +1,9 @@
 #Internet Emulator Version 1.00
 
-##Contact info:
-##Ricardo Carretero
-##higgsbosonseeker@gmail.com
-##in collaboration with Inho Choi and Eli Schetinsky.
+Contact info:
+Ricardo Carretero
+higgsbosonseeker@gmail.com
+in collaboration with Inho Choi and Eli Schetinsky.
 
 This is the first release of the Internet Emulator. This program is designed to filter DNS requests if set as the primary DNS. This script gives you the ability to filter the DNS queries from a blacklist that redirects all requests specified on the blacklist to the localhost(127.0.0.1). This program also contains an HTTP and HTTPS server with their respective self certified certificates. Written using Python 2.7.12_2.
 
