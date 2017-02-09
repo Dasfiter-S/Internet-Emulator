@@ -74,7 +74,7 @@ The program will load the following default values: Config.ini for the config fi
                   set save, dns port 8000, http port, 8001, https port 8002
                   
     sudo python Main.py 
-                  set no save, load all defaults from Config.ini
+                  set no save, load all previously saved variables from Config.ini
                   
     sudo python Main.py -s
                   set save, gets ignored since no values were chosen
