@@ -18,14 +18,16 @@ Quick setup guide:
     
     sudo python Main.py -s -dp 53 -hp 80 -hsp 443
     
-    This will create the config.ini with the default values needed to run the program. Feel free to change them at launch or after if you know what you are doing.
+    This will create the config.ini with the default values needed to run the program. Feel free to 
+    change them at launch or after if you know what you are doing.
     
-    Make sure you set your DNS settings to point to the IP where your DNS server is hosted. If you are running it on your machine then you want your IP to be 127.0.0.1 or localhost.
+    Make sure you set your DNS settings to point to the IP where your DNS server is hosted. 
+    If you are running it on your machine then you want your IP to be 127.0.0.1 or localhost.
     
     Ignore this part if you aren't running this on a virtual machine:
     
-    If you are using a virtual machine and you want to use the default ports you are going to have to do some digging
-    to get it working on linux. On OSX you can use the following guide:
+    If you are using a virtual machine and you want to use the default ports you are 
+    going to have to do some digging to get it working on linux. On OSX you can use the following guide:
     
     http://www.dmuth.org/node/1404/web-development-port-80-and-443-vagrant
     
@@ -34,7 +36,8 @@ How to use:
     Known supported systems: Linux Ubuntu and OSX 
     Untested: Windows systems of any type
     
-    Navigate your console to where this program was extracted. If you wish to run the program with the default parameters simply run:
+    Navigate your console to where this program was extracted. If you wish to run the 
+    program with the default parameters simply run:
     
     sudo python Main.py
     
@@ -72,7 +75,10 @@ The program will load the following default values: Config.ini for the config fi
                   set save, gets ignored since no values were chosen
                   
     sudo python Main.py -wf test.txt -bf test2.txt
-                  set no save, whitelist to text.txt, set blackfile to test2.txt. This has some unexpected behavior as in the names of the files will get reset to None before getting passed to the DNS. It is safer to choose your files with the save option.
+                  set no save, whitelist to text.txt, set blackfile to test2.txt. 
+                  This has some unexpected behavior as in the names of the files 
+                  will get reset to None before getting passed to the DNS.
+                  It is safer to choose your files with the save option.
 
 
 Troubleshooting:
