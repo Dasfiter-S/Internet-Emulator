@@ -88,7 +88,7 @@ The program will load the following default values: Config.ini for the config fi
 
 **Troubleshooting:**
 
-Always make sure that Config.ini has values when loading. While there are some safeguards, it is still recommended to not leave the config file blank. If the config file is missing the program will quit. If the config file is there but it is empty it will try to populate the files with the default values or the values passed to it via the command line during launch.
+Always make sure that Config.ini has values when loading. While there are some safeguards, it is still recommended to not leave the config file blank. If the config file is missing entirely the program will quit. If the config file is there but it is empty it will try to populate the files with the default values or the values passed to it via the command line during launch.
 
 **Port in use error:**
 
