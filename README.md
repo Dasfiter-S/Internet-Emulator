@@ -46,7 +46,7 @@ The HTTP server is running on the standard http port 80. The HTTPS server is run
     
     sudo python Main.py
     
- At first your script might not redirect any websites since you will have to add websites to the blacklist. The blacklist is simply a file in the folder called blacklist.txt. You also have access to a whitelist for more control which is also just a whitelist.txt file. The whitelist could be a redirect list or whatever you wish to make of it. The evaluation is as follows:
+ At first your script might not redirect any websites since you will have to add websites to the blacklist. The blacklist is simply a file in the folder where you extracted called blacklist.txt. You also have access to a whitelist for more control which is also just a whitelist.txt file. The whitelist could be a redirect list or whatever you wish to make of it. The evaluation is as follows:
  
     Check Black list first
     Check White list second
