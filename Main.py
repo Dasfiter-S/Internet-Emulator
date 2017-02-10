@@ -37,9 +37,9 @@ def keepRunning():
     running = True
     try:
         running = True
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, SystemExit):
         running = False
-        raise KeyboardInterrupt
+        raise
 
     return running
 
@@ -54,9 +54,10 @@ if __name__ == '__main__':
            time.sleep(1)
            sys.stderr.flush()
            sys.stdout.flush()
-    except KeyboardInterrupt:
-        raise KeyboardInterrupt
-        logging.debug('Terminated via SIGINT')
+    except (KeyboardInterrupt, SystemExit):
+        print 'Terminated via SIGNINT'
+#        logging.debug('Terminated via SIGINT')
+#        raise
         sys.exit(1)
 
 #move config.ini to main

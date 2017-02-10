@@ -100,38 +100,13 @@ class IOitems(object):
                     serverConfig['HTTPport'] = readfile.get('Run_Time', 'HTTPport') 
                 if readfile.has_option('Run_Time', 'HTTPSport'):
                     serverConfig['HTTPSport'] = readfile.get('Run_Time', 'HTTPSport')
-                if readfile.has_option('Run_Time', 'VS_Ports'):
-                    serverConfig['VS_Ports'] = readfile.get('Run_Time', 'VS_Ports')
-                if readfile.has_option('Run_Time', 'Certs'):
-                    serverConfig['Certs'] = readfile.get('Run_Time', 'Certs')
-                if readfile.has_option('Run_Time', 'Keys'):
-                    serverConfig['Keys'] = readfile.get('Run_Time', 'Keys')
-                if readfile.has_option('Run_Time', 'Handlers'):
-                    serverConfig['Handlers'] = readfile.get('Run_Time', 'Handlers') 
-                if readfile.has_option('Run_Time', 'Name'):
-                    serverConfig['Name'] = readfile.get('Run_Time', 'Name')
-            if not readfile.has_section('Domain'):
-                print 'File missing:\n --Domain section--'
-                logging.debug('File missing: Domain section')
-            elif readfile.has_section('Domain'):
-                #load the params
-                if readfile.has_option('Run_Time', 'SiteName'):
-                    serverConfig['SiteName'] = readfile.get('Domain', 'SiteName')
-                if readfile.has_option('Run_Time', 'IP'):
-                    serverConfig['IP'] = readfile.get('Domain', 'IP')
-                if readfile.has_option('Run_Time', 'TTL'):    
-                    serverConfig['TTL'] = readfile.get('Domain', 'TTL')
-                if readfile.has_option('Run_Time', 'Port'):    
-                    serverConfig['Port'] = readfile.get('Domain', 'Port')
-                if readfile.has_option('Run_Time', 'Admin'):
-                    serverConfig['Admin'] = readfile.get('Domain', 'Admin')
             return serverConfig
         except IOError:
             print 'File not found, please specify a valid file or verify the file name'
             logging.debug('File not found, please specify a valid file or verify the file name')
             sys.exit(1)
 
-    def writeToConfig(self, currentFile=None, DNSport=None, whiteFile=None, blackFile=None, http_port=None, https_port=None, vs_ports=None, certs=None, keys=None, handlers=None, name=None, domain=None):
+    def writeToConfig(self, currentFile=None, DNSport=None, whiteFile=None, blackFile=None, http_port=None, https_port=None):
         try:
            config_file = ConfigParser.ConfigParser()
            config_file.read(currentFile)
@@ -149,16 +124,6 @@ class IOitems(object):
                if https_port is not None:
                    config_file.set('Run_Time', 'HTTPSport', https_port)
                #Virtual server configs 
-               if https_port is not None:
-                   config_file.set('Run_Time', 'VS_Ports', vs_ports)
-               if https_port is not None:
-                   config_file.set('Run_Time', 'Certs', certs)
-               if https_port is not None:
-                   config_file.set('Run_Time', 'Keys', keys)
-               if https_port is not None:
-                   config_file.set('Run_Time', 'Handlers', handlers)
-               if https_port is not None:
-                   config_file.set('Run_Time', 'Name', name)
            elif not config_file.has_section('Run_Time'):
                #create config section
                print 'Adding section and items with specified values or defaults'
@@ -184,21 +149,6 @@ class IOitems(object):
                    config_file.set('Run_Time', 'HTTPSport', https_port)
                else:
                    config_file.set('Run_Time', 'HTTPSport', '443')
-           if not config_file.has_section('Domain'):
-               config_file.add_section('Domain')
-               if domain is not None:
-                   config_file.set('Domain', 'SiteName', domain.name)
-                   config_file.set('Domain', 'IP', domain.IP)
-                   config_file.set('Domain', 'TTL', domain.TTL)
-                   config_file.set('Domain', 'Port', domain.port)
-                   config_file.set('Domain', 'Admin', domain.admin)
-           elif config_file.has_section('Domain'):
-               if domain is not None:
-                   config_file.set('Domain', 'SiteName', domain.name)
-                   config_file.set('Domain', 'IP', domain.IP)
-                   config_file.set('Domain', 'TTL', domain.TTL)
-                   config_file.set('Domain', 'Port', domain.port)
-                   config_file.set('Domain', 'Admin', domain.admin)
            print 'Writing to file: %s' % (currentFile)
            logging.debug('Writing to file: %s' % (currentFile))
            with open(currentFile, 'w') as configfile:

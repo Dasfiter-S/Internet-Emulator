@@ -46,11 +46,11 @@ class DNSServer(BaseServer):
             logging.debug('DNS server running on %s port' % (self.port))
             DNS = SocketServer.ThreadingUDPServer(('', self.port), Controller.Controller.UDPRequestHandler)
             DNS.serve_forever()
-        except KeyboardInterrupt:
-            raise KeyboardInterrupt
+        except (KeyboardInterrupt, SystemExit):
             DNS.shutdown()
             DNS.server_close()
-#HTTP server, c 
+            sys.exit(1)
+ 
 class HTTPServer(BaseServer):
     def run(self):
         try:
@@ -58,7 +58,7 @@ class HTTPServer(BaseServer):
             logging.debug('Serving HTTP at port %s' % (self.port))
             http = SocketServer.TCPServer(('', int(self.port)), View.BaseHandler)
             http.serve_forever()
-        except KeyboardInterrupt:
+        except (KeyboardInterrupt, SystemExit):
             http.shutdown()
             http.server_close()
 
@@ -84,8 +84,7 @@ class HTTPSServer(BaseServer):
                 data = connstream.read()
                 host = self.processHost(data)
                 self.__do_SNI(address, host, connstream, current_server, data, connection)
-            except KeyboardInterrupt:
-                raise KeyboardInterrupt
+            except (KeyboardInterrupt, SystemExit):
                 connstream.shutdown(socket.SHUT_RDWR)
                 connstream.close()
                 sys.exit(1)
@@ -137,7 +136,7 @@ class EasyHTTPSServer(BaseServer):
             https = BaseHTTPServer.HTTPServer(('', int(self.port)), View.HTTPShandler)
             https.socket = ssl.wrap_socket(https.socket, certfile='./server.crt', server_side=True, keyfile='server.key')
             https.serve_forever()
-        except KeyboardInterrupt:
+        except (KeyboardInterrupt, SystemExit):
             https.shutdown()
             https.server_close()
 
