@@ -50,7 +50,7 @@ The HTTP server is running on the standard http port 80. The HTTPS server is run
     If site query is not on either lists then access google DNS and obtain the info.
     
     **Note:** 
-    Currently only forward DNS is supported for the white and blacklists. Right now any reverse DNS lookups are forwarded.
+    Currently only forward DNS is supported for the white and blacklists. Any reverse DNS lookups are forwarded.
     
 The program will load the following default values: Config.ini for the config files, blacklist.txt for the blacklist, dnsCache.txt for the whitelist, port 53 for the DNS server, port 80 for HTTP, port 443 for HTTPS. You can directly edit the config file to change the load values. The program also supports command line options to specify the following:
  
