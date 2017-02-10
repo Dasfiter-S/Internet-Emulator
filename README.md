@@ -97,7 +97,7 @@ You will need root access to run the script at the default ports 53, 80, and 443
 
 **DNS server not redirecting to local index file:**
 
-Make sure that the DNS server is set at the primary and only DNS server. Also check to make sure that the address you typed in is the desired some such as the difference between http://not.right.com and https://not.right.com. As far as the servers serving the index pages are concerned these are two completely different pages on two completely different servers.
+Make sure that the DNS server is set as the primary and only DNS server. Also check to make sure that the address you typed in is the desired some such as the difference between http://not.right.com and https://not.right.com. As far as the servers serving the index pages are concerned these are two completely different pages on two completely different servers.
 
 **Blacklist.txt warning:**
 
