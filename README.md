@@ -101,7 +101,11 @@ Make sure that the DNS server is set as the primary and only DNS server. Also ch
 
 **Blacklist.txt warning:**
 
-Blacklist.txt is passed to the DNS server as a tuple. This allows for faster reading. If you edit the blacklist please add a domain and an IP seperated by a comma. Example:
+Blacklist.txt is passed to the DNS server as a tuple. This allows for faster reading. If you edit the blacklist please add a domain and an IP seperated by a comma. The warning matters even more for the whilefile because it will actually look for the IP given to that file. Example:
 
       1 www.cnn.com., 127.0.0.1
       2 www.foo.com., 127.0.0.1
+
+**Unit tests**
+
+Included is the testIntegrity.py file, run the file to test the integrity of the servers and the handlers.
