@@ -170,3 +170,25 @@ def setLists(self):
         self.blacklist = items['Blacklist']
     lists = self.whitelist, self.blacklist
     return lists
+#---------------------------------------------Move to separate file to generate JSON header files
+class GenerateHeaders(object):
+    def __init__(self, code, server_type, fsize):
+        self.http_code = code
+        self.server = server_type
+        self.file_length = fsize
+        
+    def makeHeaders(self):
+        header = ''
+        if self.http_code is 200:
+            header = 'HTTP/1.1 %d OK\r\n' % (self.http_code)
+        elif self.http_code is 404:
+            header = ' HTTP/1.1 %d Not found\r\n' % (self.http_code)
+        current_date = time.strftime('%a, %d %b %Y %H:%M:%S', time.localtime())
+        header += 'Date: %s\r\n' % (current_date)
+        header += 'Server: %s\r\n' % (self.server)
+        header += 'Content-Type: html\r\n'
+        header += 'Content-Length: %s\r\n' % (self.file_length)
+        header += 'Connection: close \r\n\n'
+        data_string = json.dumps(header) 
+        return data_string
+#-----------------------------------------------

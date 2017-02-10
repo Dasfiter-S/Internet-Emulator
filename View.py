@@ -92,7 +92,7 @@ class HTTPShandler(object):
         current_date = time.strftime('%a, %d %b %Y %H:%M:%S', time.localtime())
         header += 'Date: %s\n' % (current_date)
         header += 'Server: %s\n' % (self.server)
-        header += 'Connection: closed\n\n'
+        header += 'Connection: close\n\n'
         return header
 #-----------------------------------------------------------------
     def handler(self):
@@ -103,22 +103,18 @@ class HTTPShandler(object):
             file_requested = file_requested[1]
             print 'Request type: %s' % (request_method)
             if file_requested == '/':
-                print 'Current host', self.host
                 subString = re.search('\Awww', self.host)
-                print 'Current substring', subString
                 if subString is not None:
                     if 'www' not in subString.group(0):
                         self.host = 'www.%s' % (self.host)
                 hostPath = re.sub('\.', '/', self.host)
                 if os.path.isdir(hostPath):
-                    print 'Finding index'
                     for index in 'index.html', 'index.htm':
                         index = os.path.join(hostPath, index)
                         if os.path.exists(index):
                             location = index
                             break
                 try:
-                    print 'Loading index'
                     print location
                     location = re.sub('/index', '/./index', location)
                     with open(location, 'rb') as file_handler:
@@ -133,7 +129,6 @@ class HTTPShandler(object):
 
                 server_response = response_headers.encode()
                 if request_method == 'GET':
-                    print 'Serving html response with content'
                     server_response += response_content
                 self.connection.sendall(server_response)
 

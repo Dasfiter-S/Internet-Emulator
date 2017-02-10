@@ -213,7 +213,7 @@ class Controller(IOitems):
     #requests send the raw query data and receive raw data.
     def dns_response(self, data):
         request = DNSRecord.parse(data)
-#        print 'Searching: \n %s' % (str(request))
+        print 'Searching: \n %s' % (str(request))
         logging.debug('Searching: \n %s' % (str(request)))
         reply = DNSRecord(DNSHeader(id=request.header.id, qr=1, aa=1, ra=1), q=request.q)
         query_name = request.q.qname                     #is preserved so that we can reply with proper formatting later
@@ -225,11 +225,10 @@ class Controller(IOitems):
         domainList = self.loadFile(list_names[0])
         domain_dict = dict(domainList)
         blackList = self.loadFile(list_names[1])
-
+        black_dictionary = dict(blackList)
         #Keep the domain name and an IP address in the blacklist. This way you can change line 282 and instead of redirecting
         #to address 127.0.0.1 for all blacklist addresses you can personally choose where to send each of those. Just copy
         #rdata=A(black_dictionary[str_query]))) instead of the current rdata=A('217.0.0.1')))
-        black_dictionary = dict(blackList)
         address = urlparse.urlparse(str_query)
         if black_dictionary.get(str_query):             
             reply.add_answer(RR(rname=query_name, rtype=1, rclass=1, ttl=300, rdata=A('127.0.0.1')))
@@ -243,14 +242,14 @@ class Controller(IOitems):
                     answerData, fromaddr = realDNS.recvfrom(1024)
                     realDNS.close()
                     readableAnswer = DNSRecord.parse(answerData)
-#                    print'--------- Reply:\n %s' % (str(readableAnswer))
+                    print'--------- Reply:\n %s' % (str(readableAnswer))
                     logging.debug('DNS Reply: \n %s' % (str(readableAnswer)))
                     return answerData 
                 except socket.gaierror: 
 #                    print '-------------NOT A VALID ADDRESS--------------'
                     logging.error('Not a valid address %s' % (str_query))
  
-#        print '--------- Reply:\n %s' % (str(reply))
+        print '--------- Reply:\n %s' % (str(reply))
         logging.debug('DNS Reply: \n %s' % (str(reply)))
         return reply.pack()   # replies with an empty pack if address is not found
     
