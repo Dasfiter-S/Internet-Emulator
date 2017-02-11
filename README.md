@@ -8,6 +8,10 @@ The program was designed to capture web requests that need to be resolved locall
 
 The HTTP server is running on the standard http port 80. The HTTPS server is running on the standard HTTPS port 443. The HTTP server supports Virtual hosting by accessing several websites using a single HTTP server. The HTTPS server supports the HTTPS Virtual Hosting equivalent. It does this by checking the name of the host request and passing it to the server so it can load that certificate instead of the default certificate for the HTTPS server.
 
+
+**Step by step set up**
+    
+
 **Quick setup guide:**
 
     Edit blacklist.txt and enter the website you wish to block or redirect.
