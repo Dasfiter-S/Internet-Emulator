@@ -1,5 +1,4 @@
 import sys
-import time
 import traceback
 import SocketServer
 import datetime
@@ -7,7 +6,6 @@ import Model
 import urlparse
 import ConfigParser
 import logging
-import sockDev
 from dnslib import *
 
 
