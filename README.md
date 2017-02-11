@@ -16,9 +16,9 @@ The HTTP server is running on the standard http port 80. The HTTPS server is run
     for a detailed look on usage of the command.
     If you are using linux please follow this guide https://www.cyberciti.biz/faq/howto-linux-bsd-unix-set-dns-nameserver/
     
-    --Step2: Run sudo python Main.py from the folder where you extracted.
+    --Step2: Run sudo python Main.py from the folder where you extracted. If you do not have root access go to the Config.ini and change the ports to anything higher than 1024. Anything below that is reserved and will require root access.
     
-    --Step3: Open your browser and enter www.foo.com. You can expect to see Mr.T greet you from the default index.html file.
+    --Step3: Open your browser and enter www.foo.com. You can expect to see Mr.T greet you from the default index.html file. Again, if you do not have root access you will have to change the ports which in turn will change the way your URL looks since you will have to append the port where the server is listening.
 
 **Setup guide:**
 
