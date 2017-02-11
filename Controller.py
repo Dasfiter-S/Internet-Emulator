@@ -3,12 +3,8 @@ import time
 import traceback
 import SocketServer
 import datetime
-import time
-import threading
 import Model
-import View
 import urlparse
-import Util
 import ConfigParser
 import logging
 import sockDev
@@ -242,14 +238,14 @@ class Controller(IOitems):
                     answerData, fromaddr = realDNS.recvfrom(1024)
                     realDNS.close()
                     readableAnswer = DNSRecord.parse(answerData)
-                    print'--------- Reply:\n %s' % (str(readableAnswer))
+#                    print'--------- Reply:\n %s' % (str(readableAnswer))
                     logging.debug('DNS Reply: \n %s' % (str(readableAnswer)))
                     return answerData 
                 except socket.gaierror: 
 #                    print '-------------NOT A VALID ADDRESS--------------'
                     logging.error('Not a valid address %s' % (str_query))
  
-        print '--------- Reply:\n %s' % (str(reply))
+#        print '--------- Reply:\n %s' % (str(reply))
         logging.debug('DNS Reply: \n %s' % (str(reply)))
         return reply.pack()   # replies with an empty pack if address is not found
     

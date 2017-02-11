@@ -1,23 +1,16 @@
 import SocketServer
 import socket
 import threading
-import Queue
 import sys
 import Controller
 import View
-import SimpleHTTPServer
 import BaseHTTPServer
-import urllib
-import posixpath
 import ssl
 import logging
 import Util
 import re
 import OpenSSL
 from dnslib import *
-from multiprocessing.dummy import Pool as ThreadPool
-from OpenSSL.crypto import FILETYPE_PEM, load_privatekey, load_certificate
-from OpenSSL.SSL import TLSv1_METHOD, Context, Connection
 
 
 class Server(object):
@@ -77,13 +70,15 @@ class HTTPSServer(BaseServer):
                 connection, address = current_server.accept()
                 print 'Incoming connection \n Address: %s' % (str(address))
                 tool = Util.Util()
-                server_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-                server_context.load_cert_chain(certfile=tool.get_path('/certs/test1cert.pem'),
-                                               keyfile=tool.get_path('/certs/test1key.pem'))
-                connstream = server_context.wrap_socket(connection, server_side=True)
-                data = connstream.read()
-                host = self.processHost(data)
-                self.__do_SNI(address, host, connstream, current_server, data, connection)
+                server_context = OpenSSL.SSL.Context(OpenSSL.SSL.TLSv1_METHOD)
+                server_context.set
+ #               server_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+#                server_context.load_cert_chain(certfile=tool.get_path('/certs/test1cert.pem'),
+#                                               keyfile=tool.get_path('/certs/test1key.pem'))
+#                connstream = server_context.wrap_socket(connection, server_side=True)
+#                data = connstream.read()
+#                host = self.processHost(data)
+#                self.__do_SNI2(address, host, connstream, current_server, data, connection)
             except (KeyboardInterrupt, SystemExit):
                 connstream.shutdown(socket.SHUT_RDWR)
                 connstream.close()
@@ -96,17 +91,31 @@ class HTTPSServer(BaseServer):
             new_context.use_certificate(self.__loadCert('/certs/%s.cert' % (host), tool))
             new_context.use_privatekey(self.__loadKey('/certs/%s.key' % (host), tool))
             server_ssl = OpenSSL.SSL.Connection(new_context, server)
-            server_ssl.set_context(new_context)
+#            server_ssl.connect(('', int(self.port)))
+            new_stream = server_ssl.wrap_socket(conn, server_side=True)
             print server_ssl.get_state_string()
             print 'Processing data after accept'
             #passing data to the handler
             virtual_handler = HandlerFactory()
             handler = virtual_handler.https_factory()
-            https_handler = handler(data_in, connstream, host)
+            https_handler = handler(data_in, new_stream, host)
             https_handler.handler()
 
-            connstream.shutdown(socket.SHUT_RDWR)
-            connstream.close()
+            #connstream.shutdown(socket.SHUT_RDWR)
+            #connstream.close()
+
+    def __do_SNI2(self, addr, host, connstream, server, data_in, conn):
+        tool = Util.Util()
+        if host is not None:
+                new_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+                new_context.load_cert_chain(certfile=tool.get_path('/certs/%s.cert' % (host)),
+                                               keyfile=tool.get_path('/certs/%s.key' % (host)))
+                new_stream = new_context.wrap_socket(conn, server_side=True)
+                print new_context.get_state_string()
+                virtual_handler = HandlerFactory()
+                handler = virtual_handler.https_factory()
+                https_handler = handler(data_in, connstream, host)
+                https_handler.handler()
 
     def processHost(self, data_in):
         host = re.search('(?<=Host: ).*', data_in)

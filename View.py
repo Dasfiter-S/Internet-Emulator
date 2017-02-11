@@ -68,7 +68,7 @@ class NginxServerHandler(BaseHandler):
     server_version = 'nginx'
 
 class ApacheServerHandler(BaseHandler):
-    server_versioa = ''
+    server_version = 'Apache'
 
 class GwsServerHandler(BaseHandler):
     server_version = 'gws'
