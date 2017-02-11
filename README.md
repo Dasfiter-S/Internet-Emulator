@@ -9,10 +9,17 @@ The program was designed to capture web requests that need to be resolved locall
 The HTTP server is running on the standard http port 80. The HTTPS server is running on the standard HTTPS port 443. The HTTP server supports Virtual hosting by accessing several websites using a single HTTP server. The HTTPS server supports the HTTPS Virtual Hosting equivalent. It does this by checking the name of the host request and passing it to the server so it can load that certificate instead of the default certificate for the HTTPS server.
 
 
-**Step by step set up**
+**Simple set up**
+    **Step 1:** If you are on Mac OS you can set your DNS via networksetup -setdnsservers Wi-Fi [Your DNS IP goes here without brackets]
+    if you are having trouble with the mac command feel free to visit http://osxdaily.com/2015/06/02/change-dns-command-line-mac-os-x/
+    for a detailed look on usage of the command.
+    If you are using linux please follow this guide https://www.cyberciti.biz/faq/howto-linux-bsd-unix-set-dns-nameserver/
     
+    **Step2:** Run sudo python Main.py from the folder where you extracted.
+    
+    **Step3:** Open your browser and enter www.foo.com. You can expect to see Mr.T greet you from the default index.html file.
 
-**Quick setup guide:**
+**Setup guide:**
 
     Edit blacklist.txt and enter the website you wish to block or redirect.
     Open a terminal and navigate to the folder where you unpacked the script. Launch with the following:
