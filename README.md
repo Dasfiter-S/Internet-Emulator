@@ -11,14 +11,14 @@ The HTTP server is running on the standard http port 80. The HTTPS server is run
 
 **Simple set up**
 
-    **Step 1:** If you are on Mac OS you can set your DNS via networksetup -setdnsservers Wi-Fi [Your DNS IP goes here without brackets]
+    --Step 1: If you are on Mac OS you can set your DNS via networksetup -setdnsservers Wi-Fi [Your DNS IP goes here without brackets]
     if you are having trouble with the mac command feel free to visit http://osxdaily.com/2015/06/02/change-dns-command-line-mac-os-x/
     for a detailed look on usage of the command.
     If you are using linux please follow this guide https://www.cyberciti.biz/faq/howto-linux-bsd-unix-set-dns-nameserver/
     
-    **Step2:** Run sudo python Main.py from the folder where you extracted.
+    --Step2: Run sudo python Main.py from the folder where you extracted.
     
-    **Step3:** Open your browser and enter www.foo.com. You can expect to see Mr.T greet you from the default index.html file.
+    --Step3: Open your browser and enter www.foo.com. You can expect to see Mr.T greet you from the default index.html file.
 
 **Setup guide:**
 
