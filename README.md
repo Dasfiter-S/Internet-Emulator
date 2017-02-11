@@ -10,6 +10,7 @@ The HTTP server is running on the standard http port 80. The HTTPS server is run
 
 
 **Simple set up**
+
     **Step 1:** If you are on Mac OS you can set your DNS via networksetup -setdnsservers Wi-Fi [Your DNS IP goes here without brackets]
     if you are having trouble with the mac command feel free to visit http://osxdaily.com/2015/06/02/change-dns-command-line-mac-os-x/
     for a detailed look on usage of the command.
