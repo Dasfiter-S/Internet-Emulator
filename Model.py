@@ -72,13 +72,13 @@ class HTTPSServer(BaseServer):
                 tool = Util.Util()
                 server_context = OpenSSL.SSL.Context(OpenSSL.SSL.TLSv1_METHOD)
                 server_context.set
- #               server_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-#                server_context.load_cert_chain(certfile=tool.get_path('/certs/test1cert.pem'),
-#                                               keyfile=tool.get_path('/certs/test1key.pem'))
-#                connstream = server_context.wrap_socket(connection, server_side=True)
-#                data = connstream.read()
-#                host = self.processHost(data)
-#                self.__do_SNI2(address, host, connstream, current_server, data, connection)
+                server_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+                server_context.load_cert_chain(certfile=tool.get_path('/certs/test1cert.pem'),
+                                               keyfile=tool.get_path('/certs/test1key.pem'))
+                connstream = server_context.wrap_socket(connection, server_side=True)
+                data = connstream.read()
+                host = self.processHost(data)
+                self.__do_SNI(address, host, connstream, current_server, data, connection)
             except (KeyboardInterrupt, SystemExit):
                 connstream.shutdown(socket.SHUT_RDWR)
                 connstream.close()
