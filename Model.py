@@ -104,19 +104,6 @@ class HTTPSServer(BaseServer):
             #connstream.shutdown(socket.SHUT_RDWR)
             #connstream.close()
 
-    def __do_SNI2(self, addr, host, connstream, server, data_in, conn):
-        tool = Util.Util()
-        if host is not None:
-                new_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-                new_context.load_cert_chain(certfile=tool.get_path('/certs/%s.cert' % (host)),
-                                               keyfile=tool.get_path('/certs/%s.key' % (host)))
-                new_stream = new_context.wrap_socket(conn, server_side=True)
-                print new_context.get_state_string()
-                virtual_handler = HandlerFactory()
-                handler = virtual_handler.https_factory()
-                https_handler = handler(data_in, connstream, host)
-                https_handler.handler()
-
     def processHost(self, data_in):
         host = re.search('(?<=Host: ).*', data_in)
         if host is not None:
