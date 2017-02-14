@@ -89,14 +89,12 @@ class HTTPSServer(BaseServer):
             new_context.use_certificate(self.__loadCert('/certs/%s.cert' % (host), tool))
             new_context.use_privatekey(self.__loadKey('/certs/%s.key' % (host), tool))
             server_ssl = OpenSSL.SSL.Connection(new_context, server)
-#            server_ssl.connect(('', int(self.port)))
-            new_stream = server_ssl.wrap_socket(conn, server_side=True)
             print server_ssl.get_state_string()
             print 'Processing data after accept'
             #passing data to the handler
             virtual_handler = HandlerFactory()
             handler = virtual_handler.https_factory()
-            https_handler = handler(data_in, new_stream, host)
+            https_handler = handler(data_in, connstream, host)
             https_handler.handler()
 
             #connstream.shutdown(socket.SHUT_RDWR)
@@ -185,4 +183,3 @@ class GenerateHeaders(object):
         header += 'Connection: close \r\n\n'
         data_string = json.dumps(header) 
         return data_string
-#-----------------------------------------------
