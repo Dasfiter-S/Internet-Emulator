@@ -70,8 +70,6 @@ class HTTPSServer(BaseServer):
                 connection, address = current_server.accept()
                 print 'Incoming connection \n Address: %s' % (str(address))
                 tool = Util.Util()
-                server_context = OpenSSL.SSL.Context(OpenSSL.SSL.TLSv1_METHOD)
-                server_context.set
                 server_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
                 server_context.load_cert_chain(certfile=tool.get_path('/certs/test1cert.pem'),
                                                keyfile=tool.get_path('/certs/test1key.pem'))
