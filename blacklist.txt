@@ -1,0 +1,15 @@
+www.4fgh.com., 127.0.0.1
+www.di.com., 127.0.0.1
+www.ddg.com., 127.0.0.1
+www.ggh.com., 127.0.0.1
+www.aaa.com., 127.0.0.1
+www.dddf.com., 127.0.0.1
+osls.com, 127.0.0.1
+www.hke.com., 127.0.0.1
+oknfg.com, 127.0.0.1
+www.amazon.com., 127.0.0.1
+duo.com, 127.0.0.1
+www.cnn.com., 127.0.0.1
+cnn.com., 127.0.0.1
+foo.com., 127.0.0.1
+www.foo.com., 127.0.0.1
