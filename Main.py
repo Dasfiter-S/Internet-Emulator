@@ -44,7 +44,7 @@ def keepRunning():
     return running
 
 if __name__ == '__main__':
-    print 'Starting DNS server! '
+    print 'Starting HTTP/HTTPS web servers...'
     mainItem = IOitems()
     launchOptions(mainItem)
     Model.setLists(mainItem)
