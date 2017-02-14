@@ -16,9 +16,11 @@ The HTTP server is running on the standard http port 80. The HTTPS server is run
     for a detailed look on usage of the command.
     If you are using linux please follow this guide https://www.cyberciti.biz/faq/howto-linux-bsd-unix-set-dns-nameserver/
     
-    --Step2: Run sudo python Main.py from the folder where you extracted. If you do not have root access go to the Config.ini and change the ports to anything higher than 1024. Anything below that is reserved and will require root access.
+    --Step2: Run sudo python DNS.py from the folder where you extracted. If you do not have root access go to the Config.ini and change the ports to anything higher than 1024. Anything below that is reserved and will require root access.
     
-    --Step3: Open your browser and enter www.foo.com. You can expect to see Mr.T greet you from the default index.html file. Again, if you do not have root access you will have to change the ports which in turn will change the way your URL looks since you will have to append the port where the server is listening.
+    --Step3: Run sudo python Main.py from the folder where you extracted. If you do not have root access go to the Config.ini and change the ports to anything higher than 1024. Anything below that is reserved and will require root access.
+    
+    --Step4: Open your browser and enter www.foo.com. You can expect to see Mr.T greet you from the default index.html file. Again, if you do not have root access you will have to change the ports which in turn will change the way your URL looks since you will have to append the port where the server is listening.
 
 **Setup guide:**
 
@@ -28,7 +30,7 @@ The HTTP server is running on the standard http port 80. The HTTPS server is run
     sudo python Main.py -s -dp 53 -hp 80 -hsp 443
     
     This will create the config.ini with the default values needed to run the program. Feel free to 
-    change them at launch or after if you know what you are doing.
+    change them at launch or after if you know what you are doing. Keep in mind that Main.py only launches the HTTP and HTTPS servers. To run the DNS server you have to use sudo python DNS.py
     
     Create your webfolder inside the /www/ folder with the format /www/foo/com/index.html
     This way it is easier to translate the host domain to a folder path and the index.html
