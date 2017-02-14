@@ -184,9 +184,6 @@ class IOitems(object):
         #Initialize and run DNS, HTTP and HTTPS
         self.setPorts()
         serverList = Model.Server()
-        DNS_server = serverList.factory('DNS', int(self.port))
-        DNS_server.daemon = True
-        DNS_server.start()
 
         http_server = serverList.factory('HTTP', self.http_port)
         http_server.daemon = True
@@ -213,7 +210,7 @@ class Controller(IOitems):
         query_name = request.q.qname                     #is preserved so that we can reply with proper formatting later
         str_query = repr(query_name)                     #remove class formatting
         str_query = str_query[12:-2]                     #DNSLabel type, strip class and take out string  
-
+        print 'Query: ', str_query
         #Dictionary is loaded as such because of ease of access for the domain names
         list_names = Model.setLists(self)
         domainList = self.loadFile(list_names[0])
@@ -236,14 +233,14 @@ class Controller(IOitems):
                     answerData, fromaddr = realDNS.recvfrom(1024)
                     realDNS.close()
                     readableAnswer = DNSRecord.parse(answerData)
-#                    print'--------- Reply:\n %s' % (str(readableAnswer))
+                    print'--------- Reply:\n %s' % (str(readableAnswer))
                     logging.debug('DNS Reply: \n %s' % (str(readableAnswer)))
                     return answerData 
                 except socket.gaierror: 
 #                    print '-------------NOT A VALID ADDRESS--------------'
                     logging.error('Not a valid address %s' % (str_query))
  
-#        print '--------- Reply:\n %s' % (str(reply))
+        print '--------- Reply:\n %s' % (str(reply))
         logging.debug('DNS Reply: \n %s' % (str(reply)))
         return reply.pack()   # replies with an empty pack if address is not found
     
@@ -263,7 +260,7 @@ class Controller(IOitems):
 
         def handle(self):
             now = datetime.datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f')
-#            print '\n\n%s request %s (%s %s):' % (self.__class__.__name__[:3], now, self.client_address[0], self.client_address[1])
+            print '\n\n%s request %s (%s %s):' % (self.__class__.__name__[:3], now, self.client_address[0], self.client_address[1])
             logging.debug('\n\n%s request %s (%s %s):' % (self.__class__.__name__[:3], now, self.client_address[0], self.client_address[1]))
             
             try:
